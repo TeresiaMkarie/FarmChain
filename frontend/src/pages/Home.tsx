@@ -79,7 +79,7 @@ export default function Home() {
     <div className="bg-white text-gray-800">
 
       {/* ── Hero ─────────────────────────────────────────────── */}
-      <section className="relative bg-gradient-to-br from-green-900 via-green-800 to-green-700 text-white overflow-hidden">
+      <section className="relative bg-gradient-to-br from-green-950 via-green-900 to-green-800 text-white overflow-hidden -mt-14 pt-14">
         {/* dot grid */}
         <div className="absolute inset-0 opacity-10"
           style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '36px 36px' }}
