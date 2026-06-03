@@ -12,7 +12,7 @@ export default function Navbar() {
   };
 
   return (
-    <nav className="bg-green-800 text-white px-6 py-3 flex items-center justify-between shadow-md">
+    <nav className="sticky top-0 z-50 mx-4 mt-3 rounded-2xl bg-green-900/80 backdrop-blur-md text-white px-6 py-3 flex items-center justify-between shadow-lg border border-white/10">
       <Link to="/" className="text-xl font-bold tracking-wide">
         🌾 FarmChain
       </Link>
