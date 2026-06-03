@@ -18,23 +18,16 @@ export default function Navbar() {
       </Link>
 
       <div className="flex items-center gap-4 text-sm">
+        <Link to="/marketplace" className="hover:text-green-300">Marketplace</Link>
         {connected && role === 'Farmer' && (
           <>
             <Link to="/farmer/dashboard" className="hover:text-green-300">Dashboard</Link>
             <Link to="/farmer/list-product" className="hover:text-green-300">List Product</Link>
-            <Link to="/farmer/orders" className="hover:text-green-300">Orders</Link>
           </>
         )}
         {connected && role === 'Buyer' && (
-          <>
-            <Link to="/marketplace" className="hover:text-green-300">Marketplace</Link>
-            <Link to="/buyer/orders" className="hover:text-green-300">My Orders</Link>
-          </>
+          <Link to="/buyer/dashboard" className="hover:text-green-300">Dashboard</Link>
         )}
-        {connected && role === 'Admin' && (
-          <Link to="/admin" className="hover:text-green-300">Admin</Link>
-        )}
-        <Link to="/history" className="hover:text-green-300">History</Link>
 
         {connected && publicKey ? (
           <div className="flex items-center gap-2">
