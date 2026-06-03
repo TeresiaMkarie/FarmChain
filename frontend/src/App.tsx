@@ -7,6 +7,7 @@ import AuthPage from './pages/AuthPage';
 import Marketplace from './pages/Marketplace';
 import FarmerDashboard from './pages/FarmerDashboard';
 import ListProduct from './pages/ListProduct';
+import BuyerDashboard from './pages/BuyerDashboard';
 import OrderPage from './pages/OrderPage';
 
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactElement; requiredRole?: string }) {
@@ -32,6 +33,10 @@ export default function App() {
             } />
             <Route path="/farmer/list-product" element={
               <ProtectedRoute requiredRole="Farmer"><ListProduct /></ProtectedRoute>
+            } />
+
+            <Route path="/buyer/dashboard" element={
+              <ProtectedRoute requiredRole="Buyer"><BuyerDashboard /></ProtectedRoute>
             } />
 
             <Route path="/orders/:id" element={
