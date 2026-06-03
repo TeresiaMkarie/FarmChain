@@ -1,0 +1,22 @@
+name: Contracts
+
+on:
+  push:
+    paths: ['contracts/**']
+  pull_request:
+    paths: ['contracts/**']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: contracts
+      - run: cd contracts && cargo test
+      - run: cd contracts && cargo install --locked stellar-cli 2>/dev/null || true
+      - run: cd contracts && stellar contract build

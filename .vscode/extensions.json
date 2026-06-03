@@ -1,0 +1,8 @@
+{
+  "recommendations": [
+    "bierner.markdown-mermaid"
+  ],
+  "unwantedRecommendations": [
+    "mermaidchart.vscode-mermaid-chart"
+  ]
+}
