@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useWalletStore } from '../store/walletStore';
+import HeroIllustration from '../components/shared/HeroIllustration';
 
 const steps = [
   {
@@ -79,39 +80,54 @@ export default function Home() {
 
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="relative bg-gradient-to-br from-green-900 via-green-800 to-green-700 text-white overflow-hidden">
+        {/* dot grid */}
         <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: 'radial-gradient(circle at 20% 50%, white 1px, transparent 1px), radial-gradient(circle at 80% 20%, white 1px, transparent 1px)', backgroundSize: '60px 60px' }}
+          style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '36px 36px' }}
         />
-        <div className="relative max-w-6xl mx-auto px-6 py-28 flex flex-col items-center text-center gap-8">
-          <span className="bg-green-600/50 border border-green-400/40 text-green-100 text-sm font-medium px-4 py-1.5 rounded-full">
-            Built on Stellar · Powered by Soroban
-          </span>
+        <div className="relative max-w-6xl mx-auto px-6 py-20 grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
 
-          <h1 className="text-5xl sm:text-6xl font-extrabold leading-tight max-w-3xl">
-            Farm to Buyer,<br />
-            <span className="text-green-300">No Middlemen.</span>
-          </h1>
+          {/* Left — text */}
+          <div className="flex flex-col gap-7">
+            <span className="self-start bg-green-600/50 border border-green-400/40 text-green-100 text-sm font-medium px-4 py-1.5 rounded-full">
+              Built on Stellar · Powered by Soroban
+            </span>
 
-          <p className="text-lg sm:text-xl text-green-100 max-w-2xl leading-relaxed">
-            FarmChain is a decentralised marketplace where farmers sell directly to buyers.
-            Every payment is locked in a Stellar smart contract escrow — released only when
-            delivery is confirmed.
-          </p>
+            <h1 className="text-5xl sm:text-6xl font-extrabold leading-tight">
+              Farm to Buyer,<br />
+              <span className="text-green-300">No Middlemen.</span>
+            </h1>
 
-          <div className="flex gap-4 flex-wrap justify-center">
-            <Link
-              to={dashboardLink}
-              className="bg-white text-green-800 hover:bg-green-50 px-8 py-3.5 rounded-xl font-bold text-lg shadow-lg transition"
-            >
-              {connected ? 'Go to Dashboard' : 'Get Started Free'}
-            </Link>
-            <Link
-              to="/marketplace"
-              className="border border-white/40 hover:bg-white/10 text-white px-8 py-3.5 rounded-xl font-semibold text-lg transition"
-            >
-              Browse Marketplace
-            </Link>
+            <p className="text-lg text-green-100 leading-relaxed max-w-lg">
+              FarmChain is a decentralised marketplace where farmers sell directly to buyers.
+              Every payment is locked in a Stellar smart contract escrow — released only when
+              delivery is confirmed.
+            </p>
+
+            <div className="flex gap-4 flex-wrap">
+              <Link
+                to={dashboardLink}
+                className="bg-white text-green-800 hover:bg-green-50 px-8 py-3.5 rounded-xl font-bold text-lg shadow-lg transition"
+              >
+                {connected ? 'Go to Dashboard' : 'Get Started Free'}
+              </Link>
+              <Link
+                to="/marketplace"
+                className="border border-white/40 hover:bg-white/10 text-white px-8 py-3.5 rounded-xl font-semibold text-lg transition"
+              >
+                Browse Marketplace
+              </Link>
+            </div>
+
+            <p className="text-green-300 text-sm">
+              Free to join · No bank account needed · Instant XLM settlement
+            </p>
           </div>
+
+          {/* Right — illustration */}
+          <div className="hidden lg:flex items-center justify-center">
+            <HeroIllustration />
+          </div>
+
         </div>
       </section>
 
