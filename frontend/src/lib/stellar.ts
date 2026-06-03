@@ -1,6 +1,7 @@
 import {
   getAddress,
   isConnected,
+  requestAccess,
   signTransaction,
 } from '@stellar/freighter-api';
 import { Networks } from '@stellar/stellar-sdk';
@@ -15,8 +16,10 @@ export async function getFreighterPublicKey(): Promise<string | null> {
   try {
     const { isConnected: connected } = await isConnected();
     if (!connected) return null;
+    const { address: requested } = await requestAccess();
+    if (requested) return requested;
     const { address } = await getAddress();
-    return address ?? null;
+    return address || null;
   } catch {
     return null;
   }
