@@ -1,7 +1,7 @@
-import { Contract, SorobanRpc, TransactionBuilder, BASE_FEE, Networks, xdr } from '@stellar/stellar-sdk';
+import { Contract, rpc, TransactionBuilder, BASE_FEE, xdr } from '@stellar/stellar-sdk';
 import { signTx, NETWORK, RPC_URL } from './stellar';
 
-const server = new SorobanRpc.Server(RPC_URL);
+const server = new rpc.Server(RPC_URL);
 
 const REGISTRY_ID = import.meta.env.VITE_REGISTRY_CONTRACT_ID as string;
 const MARKETPLACE_ID = import.meta.env.VITE_MARKETPLACE_CONTRACT_ID as string;
@@ -22,11 +22,11 @@ async function invoke(contractId: string, method: string, args: xdr.ScVal[], sou
   const prepared = await server.prepareTransaction(tx);
   const signed = await signTx(prepared.toXDR());
 
-  const { SorobanRpc: RpcResponse } = await server.sendTransaction(
+  const response = await server.sendTransaction(
     TransactionBuilder.fromXDR(signed, NETWORK)
   );
 
-  return RpcResponse;
+  return response;
 }
 
 // Registry
