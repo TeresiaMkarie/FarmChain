@@ -1,0 +1,67 @@
+-- Users
+CREATE TABLE IF NOT EXISTS users (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  public_key    TEXT UNIQUE NOT NULL,
+  role          TEXT NOT NULL CHECK (role IN ('Farmer', 'Buyer', 'Admin')),
+  name          TEXT NOT NULL,
+  phone         TEXT,
+  location      TEXT,
+  kyc_status    TEXT NOT NULL DEFAULT 'pending' CHECK (kyc_status IN ('pending','verified','rejected')),
+  chain_verified BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Products
+CREATE TABLE IF NOT EXISTS products (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  on_chain_id   BIGINT,
+  farmer_pk     TEXT NOT NULL REFERENCES users(public_key),
+  name          TEXT NOT NULL,
+  category      TEXT NOT NULL CHECK (category IN ('grain','vegetable','fruit','dairy','livestock')),
+  quantity      BIGINT NOT NULL,
+  unit          TEXT NOT NULL CHECK (unit IN ('kg','ton','piece','liter')),
+  price_xlm     BIGINT NOT NULL,  -- stroops
+  image_cids    TEXT[] DEFAULT '{}',
+  metadata_hash TEXT,
+  description   TEXT,
+  status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','sold','cancelled')),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Orders
+CREATE TABLE IF NOT EXISTS orders (
+  id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  product_id        UUID NOT NULL REFERENCES products(id),
+  on_chain_order_id BIGINT,
+  escrow_id         TEXT,
+  farmer_pk         TEXT NOT NULL,
+  buyer_pk          TEXT NOT NULL,
+  amount            BIGINT NOT NULL,  -- stroops
+  status            TEXT NOT NULL DEFAULT 'created',
+  tracking_hash     TEXT,
+  tracking_info     TEXT,
+  tx_hash           TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Disputes
+CREATE TABLE IF NOT EXISTS disputes (
+  id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id    UUID NOT NULL REFERENCES orders(id),
+  raised_by   TEXT NOT NULL,
+  reason      TEXT,
+  evidence    TEXT[],
+  status      TEXT NOT NULL DEFAULT 'open',
+  resolution  TEXT,
+  created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+-- Receipts
+CREATE TABLE IF NOT EXISTS receipts (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id   UUID NOT NULL REFERENCES orders(id),
+  ipfs_cid   TEXT,
+  tx_hash    TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
