@@ -3,7 +3,7 @@ members = ["registry", "marketplace", "escrow"]
 resolver = "2"
 
 [workspace.dependencies]
-soroban-sdk = { version = "22.0.7", features = ["testutils"] }
+soroban-sdk = { version = "26.0.1" }
 
 [profile.release]
 opt-level = "z"
