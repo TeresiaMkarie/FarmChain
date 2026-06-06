@@ -7,10 +7,11 @@ import { shortAddress, stroopsToXlm } from '../lib/stellar';
 
 export default function FarmerDashboard() {
   const { publicKey } = useWalletStore();
-  const { products, loading: pLoading } = useProducts();
+  // Request only this farmer's products (server-side filter)
+  const { products, loading: pLoading } = useProducts(publicKey ? { farmer: publicKey } : undefined);
   const { orders, loading: oLoading } = useOrders();
 
-  const myProducts = products.filter((p) => p.farmerPk === publicKey);
+  // Orders are already filtered by the backend to this farmer's orders
   const myOrders = orders.filter((o) => o.farmerPk === publicKey);
   const earnings = myOrders
     .filter((o) => o.status === 'completed')
@@ -34,7 +35,7 @@ export default function FarmerDashboard() {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-4 mb-10">
         {[
-          { label: 'Active Listings', value: myProducts.filter((p) => p.status === 'active').length },
+          { label: 'Active Listings', value: products.filter((p) => p.status === 'active').length },
           { label: 'Total Orders', value: myOrders.length },
           { label: 'Earnings (XLM)', value: stroopsToXlm(earnings).toFixed(2) },
         ].map(({ label, value }) => (
@@ -59,7 +60,7 @@ export default function FarmerDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {myProducts.map((p) => (
+                {products.map((p) => (
                   <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 font-medium">{p.name}</td>
                     <td className="px-4 py-3 capitalize">{p.category}</td>
@@ -68,8 +69,12 @@ export default function FarmerDashboard() {
                     <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
                   </tr>
                 ))}
-                {myProducts.length === 0 && (
-                  <tr><td colSpan={5} className="px-4 py-8 text-center text-gray-400">No products listed yet.</td></tr>
+                {products.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="px-4 py-8 text-center text-gray-400">
+                      No products listed yet.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
@@ -77,7 +82,7 @@ export default function FarmerDashboard() {
         )}
       </section>
 
-      {/* My Orders */}
+      {/* Incoming Orders */}
       <section>
         <h2 className="text-xl font-semibold text-gray-700 mb-4">Incoming Orders</h2>
         {oLoading ? <p className="text-gray-400">Loading…</p> : (
@@ -104,7 +109,11 @@ export default function FarmerDashboard() {
                   </tr>
                 ))}
                 {myOrders.length === 0 && (
-                  <tr><td colSpan={4} className="px-4 py-8 text-center text-gray-400">No orders yet.</td></tr>
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-gray-400">
+                      No orders yet.
+                    </td>
+                  </tr>
                 )}
               </tbody>
             </table>
