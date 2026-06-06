@@ -50,7 +50,20 @@ async function invoke(
     .setTimeout(30)
     .build();
 
-  const prepared = await server.prepareTransaction(tx);
+  let prepared: any;
+  try {
+    prepared = await server.prepareTransaction(tx);
+  } catch (simErr: any) {
+    const simMsg: string = simErr?.message ?? String(simErr);
+    if (/not initialised|not initialized/i.test(simMsg)) {
+      throw new Error('The smart contract has not been set up yet. Please contact the FarmChain team.');
+    }
+    if (/simulation failed|HostError|invoke_function/i.test(simMsg)) {
+      throw new Error(`Contract simulation failed: ${simMsg.slice(0, 120)}`);
+    }
+    throw simErr;
+  }
+
   const signed = await signTx(prepared.toXDR());
 
   const sendResp = await server.sendTransaction(
