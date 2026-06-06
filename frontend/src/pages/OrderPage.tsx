@@ -8,6 +8,7 @@ import { stroopsToXlm, shortAddress } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
 import OrderTimeline from '../components/shared/OrderTimeline';
+import ReceiptModal from '../components/shared/ReceiptModal';
 import { parseError } from '../lib/errors';
 
 export default function OrderPage() {
@@ -16,6 +17,7 @@ export default function OrderPage() {
   const { publicKey } = useWalletStore();
   const [toast, setToast] = useState<{ status: 'pending' | 'success' | 'error'; message?: string } | null>(null);
   const [trackingInfo, setTrackingInfo] = useState('');
+  const [showReceipt, setShowReceipt] = useState(false);
 
   const isFarmer = publicKey === order?.farmerPk;
   const isBuyer = publicKey === order?.buyerPk;
@@ -143,6 +145,15 @@ export default function OrderPage() {
             </button>
           )}
 
+          {(isBuyer || isFarmer) && order.status === 'completed' && (
+            <button
+              onClick={() => setShowReceipt(true)}
+              className="w-full border border-green-600 text-green-700 hover:bg-green-50 py-2.5 rounded-xl font-semibold text-sm"
+            >
+              View Receipt
+            </button>
+          )}
+
           {isBuyer && order.status === 'completed' && order.productId && (
             <Link
               to={`/marketplace/${order.productId}`}
@@ -153,6 +164,10 @@ export default function OrderPage() {
           )}
         </div>
       </div>
+
+      {showReceipt && (
+        <ReceiptModal orderId={order.id} onClose={() => setShowReceipt(false)} />
+      )}
 
       {toast && <TxStatusToast {...toast} onClose={() => setToast(null)} />}
     </div>
