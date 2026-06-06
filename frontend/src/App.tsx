@@ -5,6 +5,7 @@ import Navbar from './components/layout/Navbar';
 import Home from './pages/Home';
 import AuthPage from './pages/AuthPage';
 import Marketplace from './pages/Marketplace';
+import ProductDetail from './pages/ProductDetail';
 import FarmerDashboard from './pages/FarmerDashboard';
 import ListProduct from './pages/ListProduct';
 import BuyerDashboard from './pages/BuyerDashboard';
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/marketplace" element={<Marketplace />} />
+            <Route path="/marketplace/:id" element={<ProductDetail />} />
 
             <Route path="/farmer/dashboard" element={
               <ProtectedRoute requiredRole="Farmer"><FarmerDashboard /></ProtectedRoute>

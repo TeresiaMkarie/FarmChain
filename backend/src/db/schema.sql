@@ -23,6 +23,7 @@ CREATE TABLE IF NOT EXISTS products (
   price_xlm     BIGINT NOT NULL,  -- stroops
   image_cids    TEXT[] DEFAULT '{}',
   metadata_hash TEXT,
+  tx_hash       TEXT,
   description   TEXT,
   status        TEXT NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','active','sold','cancelled')),
   created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
@@ -37,7 +38,9 @@ CREATE TABLE IF NOT EXISTS orders (
   farmer_pk         TEXT NOT NULL,
   buyer_pk          TEXT NOT NULL,
   amount            BIGINT NOT NULL,  -- stroops
-  status            TEXT NOT NULL DEFAULT 'created',
+  delivery_address  TEXT,
+  status            TEXT NOT NULL DEFAULT 'created'
+                      CHECK (status IN ('created','funded','shipped','completed','disputed','refunded','resolved')),
   tracking_hash     TEXT,
   tracking_info     TEXT,
   tx_hash           TEXT,
@@ -52,7 +55,7 @@ CREATE TABLE IF NOT EXISTS disputes (
   raised_by   TEXT NOT NULL,
   reason      TEXT,
   evidence    TEXT[],
-  status      TEXT NOT NULL DEFAULT 'open',
+  status      TEXT NOT NULL DEFAULT 'open' CHECK (status IN ('open','resolved')),
   resolution  TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

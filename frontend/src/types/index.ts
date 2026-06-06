@@ -19,6 +19,7 @@ export interface Product {
   priceXlm: number;
   imageCids: string[];
   metadataHash?: string;
+  description?: string;
   status: 'pending' | 'active' | 'sold' | 'cancelled';
   createdAt: string;
   farmerName?: string;
@@ -49,6 +50,22 @@ export interface Order {
   createdAt: string;
   updatedAt: string;
   product?: Product;
+  productName?: string;
+}
+
+export interface Dispute {
+  id: string;
+  orderId: string;
+  raisedBy: string;
+  reason: string | null;
+  status: 'open' | 'resolved';
+  resolution: string | null;
+  createdAt: string;
+  productId: string;
+  buyerPk: string;
+  farmerPk: string;
+  amount: number;
+  productName: string | null;
 }
 
 export interface ApiUser {
