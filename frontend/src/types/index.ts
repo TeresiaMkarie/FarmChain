@@ -30,10 +30,20 @@ export type OrderStatus =
   | 'created'
   | 'funded'
   | 'shipped'
-  | 'delivered'
   | 'completed'
   | 'disputed'
-  | 'refunded';
+  | 'refunded'
+  | 'resolved'
+  | 'cancelled';
+
+export interface OrderDispute {
+  id: string;
+  raisedBy: string;
+  reason: string | null;
+  status: 'open' | 'resolved';
+  resolution: string | null;
+  createdAt: string;
+}
 
 export interface Order {
   id: string;
@@ -43,6 +53,8 @@ export interface Order {
   farmerPk: string;
   buyerPk: string;
   amount: number;
+  quantity?: number;
+  deliveryAddress?: string;
   status: OrderStatus;
   trackingHash?: string;
   trackingInfo?: string;
@@ -51,6 +63,22 @@ export interface Order {
   updatedAt: string;
   product?: Product;
   productName?: string;
+  imageCids?: string[];
+  dispute?: OrderDispute | null;
+}
+
+export interface Receipt {
+  id: string;
+  orderId: string;
+  txHash: string | null;
+  createdAt: string;
+  buyerPk: string;
+  farmerPk: string;
+  amount: number;
+  quantity: number;
+  productName: string | null;
+  unit: string | null;
+  category: string | null;
 }
 
 export interface Dispute {
