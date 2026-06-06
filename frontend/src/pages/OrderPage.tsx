@@ -7,11 +7,12 @@ import { shipOrder, completeOrder, disputeOrder } from '../lib/api';
 import { stroopsToXlm, shortAddress } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
+import { parseError } from '../lib/errors';
 
 export default function OrderPage() {
   const { id } = useParams<{ id: string }>();
   const { order, loading, setOrder } = useOrder(id!);
-  const { publicKey, role } = useWalletStore();
+  const { publicKey } = useWalletStore();
   const [toast, setToast] = useState<{ status: 'pending' | 'success' | 'error'; message?: string } | null>(null);
   const [trackingInfo, setTrackingInfo] = useState('');
 
@@ -22,12 +23,12 @@ export default function OrderPage() {
     if (!order || !publicKey) return;
     setToast({ status: 'pending', message: 'Signing shipment transaction…' });
     try {
-      await markShipped(publicKey, order.onChainOrderId!, trackingInfo);
-      await shipOrder(order.id, { trackingInfo });
+      const { txHash } = await markShipped(publicKey, order.onChainOrderId!, trackingInfo);
+      await shipOrder(order.id, { trackingInfo, txHash });
       setOrder({ ...order, status: 'shipped' });
       setToast({ status: 'success', message: 'Order marked as shipped!' });
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message });
+      setToast({ status: 'error', message: parseError(err) });
     }
   };
 
@@ -35,12 +36,12 @@ export default function OrderPage() {
     if (!order || !publicKey) return;
     setToast({ status: 'pending', message: 'Confirming delivery and releasing funds…' });
     try {
-      await confirmDelivery(publicKey, order.onChainOrderId!);
-      await completeOrder(order.id, {});
+      const { txHash } = await confirmDelivery(publicKey, order.onChainOrderId!);
+      await completeOrder(order.id, { txHash });
       setOrder({ ...order, status: 'completed' });
       setToast({ status: 'success', message: 'Delivery confirmed! Payment released to farmer.' });
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message });
+      setToast({ status: 'error', message: parseError(err) });
     }
   };
 
@@ -53,7 +54,7 @@ export default function OrderPage() {
       setOrder({ ...order, status: 'disputed' });
       setToast({ status: 'success', message: 'Dispute raised. Admin will review.' });
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message });
+      setToast({ status: 'error', message: parseError(err) });
     }
   };
 
@@ -106,20 +107,30 @@ export default function OrderPage() {
                 placeholder="Tracking number or note…"
                 className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm"
               />
-              <button onClick={handleShip} className="w-full bg-purple-600 hover:bg-purple-700 text-white py-2.5 rounded-xl font-semibold">
+              <button
+                onClick={handleShip}
+                disabled={!trackingInfo.trim()}
+                className="w-full bg-purple-600 hover:bg-purple-700 disabled:opacity-50 text-white py-2.5 rounded-xl font-semibold"
+              >
                 Mark as Shipped
               </button>
             </>
           )}
 
           {isBuyer && order.status === 'shipped' && (
-            <button onClick={handleConfirm} className="w-full bg-green-700 hover:bg-green-600 text-white py-2.5 rounded-xl font-semibold">
+            <button
+              onClick={handleConfirm}
+              className="w-full bg-green-700 hover:bg-green-600 text-white py-2.5 rounded-xl font-semibold"
+            >
               Confirm Delivery & Release Payment
             </button>
           )}
 
           {(isFarmer || isBuyer) && ['funded', 'shipped'].includes(order.status) && (
-            <button onClick={handleDispute} className="w-full border border-red-500 text-red-600 hover:bg-red-50 py-2.5 rounded-xl font-semibold">
+            <button
+              onClick={handleDispute}
+              className="w-full border border-red-500 text-red-600 hover:bg-red-50 py-2.5 rounded-xl font-semibold"
+            >
               Raise Dispute
             </button>
           )}

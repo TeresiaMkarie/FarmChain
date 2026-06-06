@@ -124,4 +124,24 @@ impl RegistryContract {
             .persistent()
             .set(&DataKey::User(address), &record);
     }
+
+    pub fn activate_user(env: Env, address: Address) {
+        let admin: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Admin)
+            .expect("not initialised");
+        admin.require_auth();
+
+        let mut record: UserRecord = env
+            .storage()
+            .persistent()
+            .get(&DataKey::User(address.clone()))
+            .expect("user not found");
+
+        record.active = true;
+        env.storage()
+            .persistent()
+            .set(&DataKey::User(address), &record);
+    }
 }

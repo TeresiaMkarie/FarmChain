@@ -7,8 +7,13 @@ export default defineConfig({
   define: {
     global: 'globalThis',
   },
+  resolve: {
+    alias: {
+      buffer: 'buffer',
+    },
+  },
   optimizeDeps: {
-    include: ['@stellar/stellar-sdk', '@stellar/freighter-api'],
+    include: ['@stellar/stellar-sdk', '@stellar/freighter-api', 'buffer'],
   },
   build: {
     target: 'esnext',
