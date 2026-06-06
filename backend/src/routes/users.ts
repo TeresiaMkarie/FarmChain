@@ -4,6 +4,31 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
+// PATCH /users/me  —  edit own profile (name, location, phone)
+router.patch('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { name, location, phone } = req.body;
+  if (!name && location === undefined && phone === undefined) {
+    res.status(400).json({ error: 'At least one of name, location, phone is required' });
+    return;
+  }
+  try {
+    const setClauses: string[] = [];
+    const values: unknown[] = [];
+    let idx = 1;
+    if (name) { setClauses.push(`name = $${idx++}`); values.push(name); }
+    if (location !== undefined) { setClauses.push(`location = $${idx++}`); values.push(location || null); }
+    if (phone !== undefined) { setClauses.push(`phone = $${idx++}`); values.push(phone || null); }
+    values.push(req.user!.publicKey);
+    const result = await pool.query(
+      `UPDATE users SET ${setClauses.join(', ')} WHERE public_key = $${idx} RETURNING id, public_key, role, name, phone, location, chain_verified, created_at`,
+      values,
+    );
+    res.json({ user: result.rows[0] });
+  } catch (err: any) {
+    res.status(500).json({ error: err.message ?? 'Failed to update profile' });
+  }
+});
+
 // GET /users/:publicKey  —  public profile lookup
 router.get('/:publicKey', async (req: Request, res: Response) => {
   try {
