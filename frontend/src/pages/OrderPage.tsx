@@ -14,7 +14,7 @@ import { parseError } from '../lib/errors';
 export default function OrderPage() {
   const { id } = useParams<{ id: string }>();
   const { order, loading, setOrder } = useOrder(id!);
-  const { publicKey } = useWalletStore();
+  const { publicKey, role } = useWalletStore();
   const [toast, setToast] = useState<{ status: 'pending' | 'success' | 'error'; message?: string } | null>(null);
   const [trackingInfo, setTrackingInfo] = useState('');
   const [showReceipt, setShowReceipt] = useState(false);
@@ -64,9 +64,14 @@ export default function OrderPage() {
   if (loading) return <p className="p-10 text-gray-400">Loading order…</p>;
   if (!order) return <p className="p-10 text-red-500">Order not found.</p>;
 
+  const backTo = role === 'Farmer' ? '/farmer/dashboard' : '/buyer/dashboard';
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
-      <h1 className="text-2xl font-bold text-green-800 mb-6">Order Detail</h1>
+      <Link to={backTo} className="inline-flex items-center gap-1 text-sm text-green-700 hover:underline mb-6">
+        ← Back to Dashboard
+      </Link>
+      <h1 className="text-2xl font-bold text-green-800 mb-4">Order Detail</h1>
 
       <div className="bg-white rounded-2xl shadow p-6 space-y-4">
         <div className="flex justify-between items-center">
