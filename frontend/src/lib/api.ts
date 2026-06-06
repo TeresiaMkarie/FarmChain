@@ -13,6 +13,8 @@ api.interceptors.request.use((config) => {
 export default api;
 
 // Auth
+export const getChallenge = (publicKey: string) =>
+  api.get('/auth/challenge', { params: { publicKey } });
 export const register = (body: object) => api.post('/auth/register', body);
 export const login = (body: object) => api.post('/auth/login', body);
 export const getMe = () => api.get('/auth/me');
@@ -38,9 +40,11 @@ export const completeOrder = (id: string, body: object) =>
   api.post(`/orders/${id}/complete`, body);
 export const disputeOrder = (id: string, body: object) =>
   api.post(`/orders/${id}/dispute`, body);
+export const resolveOrder = (id: string, body: object) =>
+  api.patch(`/orders/${id}/resolve`, body);
 
 // Users
 export const getUser = (publicKey: string) => api.get(`/users/${publicKey}`);
-export const verifyChain = (body: object) => api.patch('/users/verify-chain', body);
+export const verifyChain = () => api.patch('/users/verify-chain');
 export const getUserHistory = (publicKey: string) =>
   api.get(`/users/${publicKey}/history`);
