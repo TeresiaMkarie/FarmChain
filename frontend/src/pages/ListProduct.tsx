@@ -12,7 +12,7 @@ import TxStatusToast from '../components/shared/TxStatusToast';
 const schema = z.object({
   name: z.string().min(2),
   category: z.enum(['grain', 'vegetable', 'fruit', 'dairy', 'livestock']),
-  quantity: z.coerce.number().positive(),
+  quantity: z.coerce.number().int().positive(),
   unit: z.enum(['kg', 'ton', 'piece', 'liter']),
   priceXlm: z.coerce.number().positive(),
   description: z.string().optional(),
@@ -35,6 +35,7 @@ export default function ListProduct() {
     setToast({ status: 'pending', message: 'Uploading product…' });
 
     try {
+      // 1. Create off-chain record and get metadata hash
       const form = new FormData();
       Object.entries(data).forEach(([k, v]) => form.append(k, String(v)));
       if (images) Array.from(images).forEach((f) => form.append('images', f));
@@ -42,8 +43,17 @@ export default function ListProduct() {
       const res = await createProduct(form);
       const { productId, metadataHash } = res.data;
 
+      // 2. List on-chain — returns on-chain ID once confirmed
       setToast({ status: 'pending', message: 'Signing transaction…' });
-      await listProduct(publicKey, BigInt(xlmToStroops(data.priceXlm)), BigInt(data.quantity), metadataHash);
+      const { txHash, onChainId } = await listProduct(
+        publicKey,
+        BigInt(xlmToStroops(data.priceXlm)),
+        BigInt(data.quantity),
+        metadataHash,
+      );
+
+      // 3. Activate the DB record with the on-chain ID
+      await activateProduct(productId, { onChainId, txHash });
 
       setToast({ status: 'success', message: 'Product listed successfully!' });
       setTimeout(() => navigate('/farmer/dashboard'), 1500);
@@ -92,7 +102,7 @@ export default function ListProduct() {
             {errors.quantity && <p className="text-red-500 text-xs mt-1">{errors.quantity.message}</p>}
           </div>
           <div>
-            <label className={labelCls}>Price (XLM)</label>
+            <label className={labelCls}>Price (XLM per unit)</label>
             <input {...register('priceXlm')} type="number" step="0.01" className={inputCls} placeholder="10.00" />
             {errors.priceXlm && <p className="text-red-500 text-xs mt-1">{errors.priceXlm.message}</p>}
           </div>
