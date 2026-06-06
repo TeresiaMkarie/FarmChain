@@ -204,7 +204,7 @@ router.delete('/me/sessions', authMiddleware, async (req: AuthRequest, res: Resp
 router.get('/:publicKey', async (req: Request, res: Response) => {
   try {
     const result = await pool.query(
-      `SELECT id, public_key, role, name, location, country, city, chain_verified, created_at
+      `SELECT id, public_key, role, name, location, country, county, city, address_line, chain_verified, created_at
        FROM users WHERE public_key = $1`,
       [req.params.publicKey],
     );
