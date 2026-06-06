@@ -5,6 +5,7 @@ import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
 import userRoutes from './routes/users';
+import disputeRoutes from './routes/disputes';
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
@@ -32,6 +33,7 @@ app.use('/auth', authRoutes);
 app.use('/products', productRoutes);
 app.use('/orders', orderRoutes);
 app.use('/users', userRoutes);
+app.use('/disputes', disputeRoutes);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
