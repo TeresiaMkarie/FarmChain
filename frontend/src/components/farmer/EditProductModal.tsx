@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { updateProduct } from '../../lib/api';
 import { stroopsToXlm } from '../../lib/stellar';
+import { parseError } from '../../lib/errors';
 import type { Product } from '../../types';
 
 interface Props {
@@ -30,7 +31,7 @@ export default function EditProductModal({ product, onClose, onUpdated }: Props)
       });
       onUpdated(res.data.product);
     } catch (err: any) {
-      setError(err.response?.data?.error ?? err.message ?? 'Failed to update product');
+      setError(parseError(err));
     } finally {
       setLoading(false);
     }

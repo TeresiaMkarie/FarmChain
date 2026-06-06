@@ -7,6 +7,7 @@ import { createOrder as createOrderChain } from '../lib/soroban';
 import { stroopsToXlm } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
+import { parseError } from '../lib/errors';
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -57,7 +58,7 @@ export default function ProductDetail() {
       setToast({ status: 'success', message: 'Order placed! Funds locked in escrow.' });
       setTimeout(() => navigate(`/orders/${orderId}`), 1500);
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message });
+      setToast({ status: 'error', message: parseError(err) });
       setBuying(false);
     }
   };

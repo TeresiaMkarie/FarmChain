@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { shipOrder } from '../../lib/api';
 import { markShipped } from '../../lib/soroban';
+import { parseError } from '../../lib/errors';
 import { useWalletStore } from '../../store/walletStore';
 import type { Order } from '../../types';
 
@@ -28,7 +29,7 @@ export default function ShipOrderModal({ order, onClose, onShipped }: Props) {
       await shipOrder(order.id, { trackingInfo: trackingInfo || null });
       onShipped();
     } catch (err: any) {
-      setError(err.message ?? 'Failed to mark as shipped');
+      setError(parseError(err));
     } finally {
       setLoading(false);
     }

@@ -7,6 +7,7 @@ import { shipOrder, completeOrder, disputeOrder } from '../lib/api';
 import { stroopsToXlm, shortAddress } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
+import { parseError } from '../lib/errors';
 
 export default function OrderPage() {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +28,7 @@ export default function OrderPage() {
       setOrder({ ...order, status: 'shipped' });
       setToast({ status: 'success', message: 'Order marked as shipped!' });
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message });
+      setToast({ status: 'error', message: parseError(err) });
     }
   };
 
@@ -40,7 +41,7 @@ export default function OrderPage() {
       setOrder({ ...order, status: 'completed' });
       setToast({ status: 'success', message: 'Delivery confirmed! Payment released to farmer.' });
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message });
+      setToast({ status: 'error', message: parseError(err) });
     }
   };
 
@@ -53,7 +54,7 @@ export default function OrderPage() {
       setOrder({ ...order, status: 'disputed' });
       setToast({ status: 'success', message: 'Dispute raised. Admin will review.' });
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message });
+      setToast({ status: 'error', message: parseError(err) });
     }
   };
 

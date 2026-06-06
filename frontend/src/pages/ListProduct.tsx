@@ -8,6 +8,7 @@ import { listProduct } from '../lib/soroban';
 import { useWalletStore } from '../store/walletStore';
 import { xlmToStroops } from '../lib/stellar';
 import TxStatusToast from '../components/shared/TxStatusToast';
+import { parseError } from '../lib/errors';
 
 const schema = z.object({
   name: z.string().min(2),
@@ -58,7 +59,7 @@ export default function ListProduct() {
       setToast({ status: 'success', message: 'Product listed successfully!' });
       setTimeout(() => navigate('/farmer/dashboard'), 1500);
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message });
+      setToast({ status: 'error', message: parseError(err) });
     }
   };
 

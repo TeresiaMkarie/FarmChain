@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getProducts, getProduct } from '../lib/api';
+import { parseError } from '../lib/errors';
 import type { Product } from '../types';
 
 function toProduct(raw: any): Product {
@@ -34,7 +35,7 @@ export function useProducts(params?: Record<string, string>) {
     setError(null);
     getProducts(params)
       .then((res) => setProducts((res.data.products ?? []).map(toProduct)))
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(parseError(err)))
       .finally(() => setLoading(false));
   };
 
@@ -54,7 +55,7 @@ export function useProduct(id: string) {
     setError(null);
     getProduct(id)
       .then((res) => setProduct(toProduct(res.data.product)))
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(parseError(err)))
       .finally(() => setLoading(false));
   }, [id]);
 

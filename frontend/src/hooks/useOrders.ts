@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { getOrders, getOrder } from '../lib/api';
+import { parseError } from '../lib/errors';
 import type { Order } from '../types';
 
 function toOrder(raw: any): Order {
@@ -31,7 +32,7 @@ export function useOrders() {
     setLoading(true);
     getOrders()
       .then((res) => setOrders((res.data.orders ?? []).map(toOrder)))
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(parseError(err)))
       .finally(() => setLoading(false));
   };
 
@@ -47,7 +48,7 @@ export function useOrder(id: string) {
   useEffect(() => {
     getOrder(id)
       .then((res) => setOrder(toOrder(res.data.order)))
-      .catch((err) => setError(err.message))
+      .catch((err) => setError(parseError(err)))
       .finally(() => setLoading(false));
   }, [id]);
 

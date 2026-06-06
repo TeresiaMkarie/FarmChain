@@ -11,6 +11,7 @@ import EditProductModal from '../components/farmer/EditProductModal';
 import { shortAddress, stroopsToXlm } from '../lib/stellar';
 import { delistProduct, activateProduct } from '../lib/api';
 import { listProduct } from '../lib/soroban';
+import { parseError } from '../lib/errors';
 import type { Order, Product } from '../types';
 
 type Toast = { status: 'pending' | 'success' | 'error'; message?: string };
@@ -65,7 +66,7 @@ export default function FarmerDashboard() {
       );
       setToast({ status: 'success', message: `${product.name} is now live!` });
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message ?? 'Activation failed' });
+      setToast({ status: 'error', message: parseError(err) });
     } finally {
       setActivatingId(null);
     }
@@ -80,7 +81,7 @@ export default function FarmerDashboard() {
       );
       setToast({ status: 'success', message: `${product.name} delisted.` });
     } catch (err: any) {
-      setToast({ status: 'error', message: err.message ?? 'Failed to delist' });
+      setToast({ status: 'error', message: parseError(err) });
     }
   };
 

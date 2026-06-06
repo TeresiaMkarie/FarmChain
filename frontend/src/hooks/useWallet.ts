@@ -3,6 +3,7 @@ import { isConnected, requestAccess, getAddress } from '@stellar/freighter-api';
 import { signTx } from '../lib/stellar';
 import { useWalletStore } from '../store/walletStore';
 import { getChallenge, login, register } from '../lib/api';
+import { parseError } from '../lib/errors';
 import type { UserRole } from '../types';
 
 export function useWallet() {
@@ -61,7 +62,7 @@ export function useWallet() {
       setWallet(pk, resolvedRole, token);
       return { pk, role: resolvedRole };
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Connection failed');
+      setError(parseError(err));
       return null;
     } finally {
       setConnecting(false);
