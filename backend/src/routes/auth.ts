@@ -1,6 +1,23 @@
 import { Router, Request, Response } from 'express';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+
+function hashToken(token: string) {
+  return crypto.createHash('sha256').update(token).digest('hex');
+}
+
+async function recordSession(pool: any, publicKey: string, token: string, req: Request) {
+  const tokenHash = hashToken(token);
+  const userAgent = req.headers['user-agent'] ?? null;
+  const ip = (req.headers['x-forwarded-for'] as string)?.split(',')[0].trim()
+    ?? req.socket.remoteAddress
+    ?? null;
+  await pool.query(
+    `INSERT INTO user_sessions (public_key, token_hash, user_agent, ip_address)
+     VALUES ($1, $2, $3, $4)`,
+    [publicKey, tokenHash, userAgent, ip],
+  ).catch(() => { /* non-fatal if sessions table not yet migrated */ });
+}
 import {
   Keypair,
   TransactionBuilder,
@@ -110,6 +127,7 @@ router.post('/register', async (req: Request, res: Response) => {
       JWT_SECRET,
       { expiresIn: '7d' },
     );
+    await recordSession(pool, user.public_key, authToken, req);
     res.json({ token: authToken, user: { id: user.id, publicKey: user.public_key, role: user.role, name: user.name } });
   } catch {
     res.status(500).json({ error: 'Registration failed' });
@@ -139,6 +157,7 @@ router.post('/login', async (req: Request, res: Response) => {
       JWT_SECRET,
       { expiresIn: '7d' },
     );
+    await recordSession(pool, user.public_key, authToken, req);
     res.json({ token: authToken, user: { id: user.id, publicKey: user.public_key, role: user.role, name: user.name } });
   } catch {
     res.status(500).json({ error: 'Login failed' });
