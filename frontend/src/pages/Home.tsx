@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { useWalletStore } from '../store/walletStore';
-import HeroIllustration from '../components/shared/HeroIllustration';
 
 const steps = [
   {
