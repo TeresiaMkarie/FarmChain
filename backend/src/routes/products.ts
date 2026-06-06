@@ -200,23 +200,52 @@ router.patch('/:id', authMiddleware, async (req: AuthRequest, res: Response) => 
   }
 });
 
-// DELETE /products/:id  — delist (soft-delete)
+// DELETE /products/:id  — delist
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   if (req.user!.role !== 'Farmer') {
     res.status(403).json({ error: 'Only farmers can delist products' });
     return;
   }
   try {
-    const result = await pool.query(
-      `UPDATE products SET status = 'cancelled' WHERE id = $1 AND farmer_pk = $2 RETURNING id`,
+    // Verify product belongs to this farmer
+    const productRes = await pool.query(
+      `SELECT id FROM products WHERE id = $1 AND farmer_pk = $2`,
       [req.params.id, req.user!.publicKey],
     );
-    if (result.rowCount === 0) {
+    if (!productRes.rows[0]) {
       res.status(404).json({ error: 'Product not found or does not belong to you' });
       return;
     }
+
+    // Block delist if funded or shipped orders exist — farmer must fulfil them first
+    const activeOrders = await pool.query(
+      `SELECT COUNT(*) AS cnt FROM orders
+       WHERE product_id = $1 AND status IN ('funded','shipped')`,
+      [req.params.id],
+    );
+    if (parseInt(activeOrders.rows[0].cnt, 10) > 0) {
+      res.status(409).json({
+        error: 'You have active orders for this product. Fulfil all funded and shipped orders before delisting.',
+      });
+      return;
+    }
+
+    // Cancel any unfunded (created) orders for this product
+    await pool.query(
+      `UPDATE orders SET status = 'cancelled', updated_at = NOW()
+       WHERE product_id = $1 AND status = 'created'`,
+      [req.params.id],
+    );
+
+    // Mark product as cancelled
+    await pool.query(
+      `UPDATE products SET status = 'cancelled' WHERE id = $1`,
+      [req.params.id],
+    );
+
     res.json({ ok: true });
-  } catch {
+  } catch (err: any) {
+    console.error('[products DELETE] error:', err?.message);
     res.status(500).json({ error: 'Failed to delist product' });
   }
 });

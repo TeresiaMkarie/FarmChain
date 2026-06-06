@@ -102,6 +102,20 @@ export const listProduct = async (
   return { txHash, onChainId };
 };
 
+export const delistProduct = (
+  farmerKey: string,
+  productId: number,
+): Promise<{ txHash: string; returnValue?: xdr.ScVal }> =>
+  invoke(
+    MARKETPLACE_ID,
+    'delist_product',
+    [
+      new Address(farmerKey).toScVal(),
+      nativeToScVal(BigInt(productId), { type: 'u64' }),
+    ],
+    farmerKey,
+  );
+
 export const getProduct = async (productId: number, callerKey: string) => {
   const contract = new Contract(MARKETPLACE_ID);
   const account = await server.getAccount(callerKey);

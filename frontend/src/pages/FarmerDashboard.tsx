@@ -9,8 +9,8 @@ import TxStatusToast from '../components/shared/TxStatusToast';
 import ShipOrderModal from '../components/farmer/ShipOrderModal';
 import EditProductModal, { type RawProductUpdate } from '../components/farmer/EditProductModal';
 import { shortAddress, stroopsToXlm } from '../lib/stellar';
-import { delistProduct, activateProduct } from '../lib/api';
-import { listProduct } from '../lib/soroban';
+import { delistProduct as delistProductApi, activateProduct } from '../lib/api';
+import { listProduct, delistProduct as delistProductChain } from '../lib/soroban';
 import { parseError } from '../lib/errors';
 import type { Order, Product } from '../types';
 
@@ -75,8 +75,13 @@ export default function FarmerDashboard() {
 
   const handleDelist = async (product: Product) => {
     setConfirmDelistId(null);
+    setToast({ status: 'pending', message: `Delisting ${product.name}…` });
     try {
-      await delistProduct(String(product.id));
+      // Remove from on-chain marketplace if the product was activated
+      if (product.onChainId && publicKey) {
+        await delistProductChain(publicKey, product.onChainId);
+      }
+      await delistProductApi(String(product.id));
       setProducts((prev) =>
         prev.map((p) => (p.id === product.id ? { ...p, status: 'cancelled' as const } : p)),
       );
