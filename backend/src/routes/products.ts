@@ -143,6 +143,63 @@ router.patch('/:id/activate', authMiddleware, async (req: AuthRequest, res: Resp
   }
 });
 
+// PATCH /products/:id  — edit price, quantity, or description
+router.patch('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  if (req.user!.role !== 'Farmer') {
+    res.status(403).json({ error: 'Only farmers can edit products' });
+    return;
+  }
+  const { priceXlm, quantity, description } = req.body;
+  if (priceXlm === undefined && quantity === undefined && description === undefined) {
+    res.status(400).json({ error: 'At least one of priceXlm, quantity, description is required' });
+    return;
+  }
+  try {
+    const setClauses: string[] = [];
+    const values: unknown[] = [];
+    let idx = 1;
+
+    if (priceXlm !== undefined) {
+      const priceStroops = Math.round(parseFloat(priceXlm) * 10_000_000);
+      if (!isFinite(priceStroops) || priceStroops <= 0) {
+        res.status(400).json({ error: 'price must be a positive number' });
+        return;
+      }
+      setClauses.push(`price_xlm = $${idx++}`);
+      values.push(priceStroops);
+    }
+    if (quantity !== undefined) {
+      const qty = parseInt(quantity, 10);
+      if (!isFinite(qty) || qty < 0) {
+        res.status(400).json({ error: 'quantity must be a non-negative integer' });
+        return;
+      }
+      setClauses.push(`quantity = $${idx++}`);
+      values.push(qty);
+    }
+    if (description !== undefined) {
+      setClauses.push(`description = $${idx++}`);
+      values.push(description || null);
+    }
+
+    values.push(req.params.id, req.user!.publicKey);
+    const result = await pool.query(
+      `UPDATE products SET ${setClauses.join(', ')}
+       WHERE id = $${idx++} AND farmer_pk = $${idx++} AND status IN ('pending','active')
+       RETURNING *`,
+      values,
+    );
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: 'Product not found or cannot be edited in its current state' });
+      return;
+    }
+    res.json({ product: result.rows[0] });
+  } catch (err: any) {
+    console.error('[products PATCH edit] error:', err?.message);
+    res.status(500).json({ error: err.message ?? 'Failed to update product' });
+  }
+});
+
 // DELETE /products/:id  — delist (soft-delete)
 router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   if (req.user!.role !== 'Farmer') {
