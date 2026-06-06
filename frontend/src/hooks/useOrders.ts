@@ -25,7 +25,7 @@ function toOrder(raw: any): Order {
     escrowId: raw.escrow_id,
     farmerPk: raw.farmer_pk,
     buyerPk: raw.buyer_pk,
-    amount: raw.amount,
+    amount: Number(raw.amount),
     quantity: raw.quantity,
     deliveryAddress: raw.delivery_address,
     status: raw.status,
