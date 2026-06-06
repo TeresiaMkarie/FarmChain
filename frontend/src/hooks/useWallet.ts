@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 import { isConnected, requestAccess, getAddress } from '@stellar/freighter-api';
+import { signTx } from '../lib/stellar';
 import { useWalletStore } from '../store/walletStore';
-import { login, register } from '../lib/api';
+import { getChallenge, login, register } from '../lib/api';
 import type { UserRole } from '../types';
 
 export function useWallet() {
@@ -13,46 +14,52 @@ export function useWallet() {
     setConnecting(true);
     setError(null);
     try {
-      // 1. Check extension is installed
+      // 1. Check Freighter is installed
       const { isConnected: hasExtension } = await isConnected();
       if (!hasExtension) {
         setError('Freighter wallet not found. Install it from freighter.app');
         return null;
       }
 
-      // 2. requestAccess triggers the Freighter popup and grants site permission.
-      //    getAddress alone returns empty string when the site has no permission yet.
+      // 2. Get the public key from Freighter
       let pk: string | undefined;
       const { address: requested, error: accessErr } = await requestAccess();
-      if (accessErr) throw new Error(accessErr.message ?? 'Freighter access denied');
-
+      if (accessErr) throw new Error((accessErr as any).message ?? 'Freighter access denied');
       if (requested) {
         pk = requested;
       } else {
-        // Already allowed — pull address directly
         const { address: existing } = await getAddress();
         pk = existing;
       }
-
       if (!pk) throw new Error('Could not get public key from Freighter');
 
-      // 3. Try login first, fall back to register for new users
+      // 3. Fetch challenge (transaction XDR) from backend, sign it with Freighter
+      const challengeRes = await getChallenge(pk);
+      const { challenge: challengeXDR, token: challengeToken } = challengeRes.data;
+
+      // signTx calls Freighter's signTransaction with the correct network passphrase
+      const signedXDR = await signTx(challengeXDR);
+
+      // 4. Login (existing user) or register (new user)
       let token: string;
       let resolvedRole: UserRole;
       try {
-        const res = await login({ publicKey: pk });
+        const res = await login({ publicKey: pk, signature: signedXDR, token: challengeToken });
         token = res.data.token;
-        resolvedRole = res.data.user.role;
-      } catch {
-        if (!userRole || !name) throw new Error('New user — provide your role and name');
-        const res = await register({ publicKey: pk, role: userRole, name });
-        token = res.data.token;
-        resolvedRole = userRole;
+        resolvedRole = res.data.user.role as UserRole;
+      } catch (loginErr: any) {
+        if (loginErr?.response?.status === 404) {
+          if (!userRole || !name) throw new Error('New user — provide your role and name');
+          const res = await register({ publicKey: pk, role: userRole, name, signature: signedXDR, token: challengeToken });
+          token = res.data.token;
+          resolvedRole = userRole;
+        } else {
+          throw loginErr;
+        }
       }
 
-      localStorage.setItem('fc_token', token);
       setWallet(pk, resolvedRole, token);
-      return pk;
+      return { pk, role: resolvedRole };
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Connection failed');
       return null;
@@ -62,7 +69,6 @@ export function useWallet() {
   }, [setWallet]);
 
   const handleDisconnect = useCallback(() => {
-    localStorage.removeItem('fc_token');
     disconnect();
   }, [disconnect]);
 
