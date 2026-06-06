@@ -69,6 +69,14 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
        VALUES ($1, $2, $3, $4, $5, 'created') RETURNING *`,
       [productId, p.farmer_pk, req.user!.publicKey, amount.toString(), deliveryAddress ?? null],
     );
+    // Decrement product quantity; auto-mark sold when exhausted
+    await pool.query(
+      `UPDATE products
+         SET quantity = GREATEST(quantity - $1, 0),
+             status   = CASE WHEN quantity - $1 <= 0 THEN 'sold' ELSE status END
+       WHERE id = $2`,
+      [quantity, productId],
+    );
     res.json({ order: result.rows[0], orderId: result.rows[0].id });
   } catch (err: any) {
     res.status(500).json({ error: err.message ?? 'Failed to create order' });
