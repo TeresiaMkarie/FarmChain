@@ -7,7 +7,7 @@ import { useDisputes } from '../hooks/useDisputes';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
 import ShipOrderModal from '../components/farmer/ShipOrderModal';
-import EditProductModal from '../components/farmer/EditProductModal';
+import EditProductModal, { type RawProductUpdate } from '../components/farmer/EditProductModal';
 import { shortAddress, stroopsToXlm } from '../lib/stellar';
 import { delistProduct, activateProduct } from '../lib/api';
 import { listProduct } from '../lib/soroban';
@@ -28,6 +28,7 @@ export default function FarmerDashboard() {
   const [shipModal, setShipModal] = useState<Order | null>(null);
   const [editModal, setEditModal] = useState<Product | null>(null);
   const [activatingId, setActivatingId] = useState<string | null>(null);
+  const [confirmDelistId, setConfirmDelistId] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
   // ── Financial summary ────────────────────────────────────────────────────
@@ -65,7 +66,7 @@ export default function FarmerDashboard() {
         prev.map((p) => (p.id === product.id ? { ...p, status: 'active' as const } : p)),
       );
       setToast({ status: 'success', message: `${product.name} is now live!` });
-    } catch (err: any) {
+    } catch (err) {
       setToast({ status: 'error', message: parseError(err) });
     } finally {
       setActivatingId(null);
@@ -73,14 +74,14 @@ export default function FarmerDashboard() {
   };
 
   const handleDelist = async (product: Product) => {
-    if (!window.confirm(`Delist "${product.name}"? It will be removed from the marketplace.`)) return;
+    setConfirmDelistId(null);
     try {
       await delistProduct(String(product.id));
       setProducts((prev) =>
         prev.map((p) => (p.id === product.id ? { ...p, status: 'cancelled' as const } : p)),
       );
-      setToast({ status: 'success', message: `${product.name} delisted.` });
-    } catch (err: any) {
+      setToast({ status: 'success', message: `${product.name} has been delisted.` });
+    } catch (err) {
       setToast({ status: 'error', message: parseError(err) });
     }
   };
@@ -91,11 +92,11 @@ export default function FarmerDashboard() {
     setToast({ status: 'success', message: 'Order marked as shipped.' });
   };
 
-  const handleProductUpdated = (raw: any) => {
+  const handleProductUpdated = (raw: RawProductUpdate) => {
     setProducts((prev) =>
       prev.map((p) =>
         String(p.id) === String(raw.id)
-          ? { ...p, priceXlm: raw.price_xlm, quantity: raw.quantity, description: raw.description }
+          ? { ...p, priceXlm: raw.price_xlm, quantity: raw.quantity, description: raw.description ?? undefined }
           : p,
       ),
     );
@@ -257,12 +258,29 @@ export default function FarmerDashboard() {
                             </button>
                           )}
                           {(p.status === 'active' || p.status === 'pending') && (
-                            <button
-                              onClick={() => handleDelist(p)}
-                              className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
-                            >
-                              Delist
-                            </button>
+                            confirmDelistId === String(p.id) ? (
+                              <>
+                                <button
+                                  onClick={() => handleDelist(p)}
+                                  className={`${btnSm} bg-red-600 hover:bg-red-700 text-white`}
+                                >
+                                  Confirm
+                                </button>
+                                <button
+                                  onClick={() => setConfirmDelistId(null)}
+                                  className={`${btnSm} bg-gray-100 hover:bg-gray-200 text-gray-600`}
+                                >
+                                  Cancel
+                                </button>
+                              </>
+                            ) : (
+                              <button
+                                onClick={() => setConfirmDelistId(String(p.id))}
+                                className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
+                              >
+                                Delist
+                              </button>
+                            )
                           )}
                           {(p.status === 'sold' || p.status === 'cancelled') && (
                             <Link

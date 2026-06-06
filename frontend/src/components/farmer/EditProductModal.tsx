@@ -4,10 +4,17 @@ import { stroopsToXlm } from '../../lib/stellar';
 import { parseError } from '../../lib/errors';
 import type { Product } from '../../types';
 
+export interface RawProductUpdate {
+  id: number | string;
+  price_xlm: number;
+  quantity: number;
+  description: string | null;
+}
+
 interface Props {
   product: Product;
   onClose: () => void;
-  onUpdated: (raw: any) => void;
+  onUpdated: (raw: RawProductUpdate) => void;
 }
 
 export default function EditProductModal({ product, onClose, onUpdated }: Props) {
