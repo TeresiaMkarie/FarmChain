@@ -26,6 +26,8 @@ export const createProduct = (data: FormData) =>
   api.post('/products', data, { headers: { 'Content-Type': 'multipart/form-data' } });
 export const activateProduct = (id: string, body: object) =>
   api.patch(`/products/${id}/activate`, body);
+export const updateProduct = (id: string, body: object) =>
+  api.patch(`/products/${id}`, body);
 export const delistProduct = (id: string) => api.delete(`/products/${id}`);
 
 // Orders
@@ -46,5 +48,9 @@ export const resolveOrder = (id: string, body: object) =>
 // Users
 export const getUser = (publicKey: string) => api.get(`/users/${publicKey}`);
 export const verifyChain = () => api.patch('/users/verify-chain');
+export const updateMe = (body: object) => api.patch('/users/me', body);
 export const getUserHistory = (publicKey: string) =>
   api.get(`/users/${publicKey}/history`);
+
+// Disputes
+export const getDisputes = () => api.get('/disputes');
