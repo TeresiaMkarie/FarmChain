@@ -2,6 +2,25 @@ import { useState, useEffect } from 'react';
 import { getOrders, getOrder } from '../lib/api';
 import type { Order } from '../types';
 
+function toOrder(raw: any): Order {
+  return {
+    id: raw.id,
+    productId: raw.product_id,
+    onChainOrderId: raw.on_chain_order_id,
+    escrowId: raw.escrow_id,
+    farmerPk: raw.farmer_pk,
+    buyerPk: raw.buyer_pk,
+    amount: raw.amount,
+    status: raw.status,
+    trackingHash: raw.tracking_hash,
+    trackingInfo: raw.tracking_info,
+    txHash: raw.tx_hash,
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+    product: raw.product,
+  };
+}
+
 export function useOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -10,7 +29,7 @@ export function useOrders() {
   const refresh = () => {
     setLoading(true);
     getOrders()
-      .then((res) => setOrders(res.data.orders ?? []))
+      .then((res) => setOrders((res.data.orders ?? []).map(toOrder)))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   };
@@ -26,7 +45,7 @@ export function useOrder(id: string) {
 
   useEffect(() => {
     getOrder(id)
-      .then((res) => setOrder(res.data.order))
+      .then((res) => setOrder(toOrder(res.data.order)))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
   }, [id]);
