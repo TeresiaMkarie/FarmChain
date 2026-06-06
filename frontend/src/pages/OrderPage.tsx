@@ -7,6 +7,7 @@ import { shipOrder, completeOrder, disputeOrder } from '../lib/api';
 import { stroopsToXlm, shortAddress } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
+import OrderTimeline from '../components/shared/OrderTimeline';
 import { parseError } from '../lib/errors';
 
 export default function OrderPage() {
@@ -27,7 +28,7 @@ export default function OrderPage() {
       await shipOrder(order.id, { trackingInfo, txHash });
       setOrder({ ...order, status: 'shipped' });
       setToast({ status: 'success', message: 'Order marked as shipped!' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({ status: 'error', message: parseError(err) });
     }
   };
@@ -40,7 +41,7 @@ export default function OrderPage() {
       await completeOrder(order.id, { txHash });
       setOrder({ ...order, status: 'completed' });
       setToast({ status: 'success', message: 'Delivery confirmed! Payment released to farmer.' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({ status: 'error', message: parseError(err) });
     }
   };
@@ -53,7 +54,7 @@ export default function OrderPage() {
       await disputeOrder(order.id, {});
       setOrder({ ...order, status: 'disputed' });
       setToast({ status: 'success', message: 'Dispute raised. Admin will review.' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({ status: 'error', message: parseError(err) });
     }
   };
@@ -96,6 +97,13 @@ export default function OrderPage() {
             <p>{order.trackingInfo}</p>
           </div>
         )}
+
+        <OrderTimeline
+          status={order.status}
+          createdAt={order.createdAt}
+          updatedAt={order.updatedAt}
+          trackingInfo={order.trackingInfo}
+        />
 
         {/* Actions */}
         <div className="pt-4 space-y-3">
