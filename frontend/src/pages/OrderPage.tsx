@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useOrder } from '../hooks/useOrders';
 import { useWalletStore } from '../store/walletStore';
@@ -126,13 +126,22 @@ export default function OrderPage() {
             </button>
           )}
 
-          {(isFarmer || isBuyer) && ['funded', 'shipped'].includes(order.status) && (
+          {isBuyer && ['funded', 'shipped'].includes(order.status) && (
             <button
               onClick={handleDispute}
               className="w-full border border-red-500 text-red-600 hover:bg-red-50 py-2.5 rounded-xl font-semibold"
             >
               Raise Dispute
             </button>
+          )}
+
+          {isBuyer && order.status === 'completed' && order.productId && (
+            <Link
+              to={`/marketplace/${order.productId}`}
+              className="block text-center w-full bg-green-50 hover:bg-green-100 text-green-700 py-2.5 rounded-xl font-semibold text-sm"
+            >
+              Buy Again
+            </Link>
           )}
         </div>
       </div>
