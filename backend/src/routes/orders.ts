@@ -4,33 +4,75 @@ import { authMiddleware, AuthRequest } from '../middleware/auth';
 
 const router = Router();
 
-// GET /orders
+// GET /orders  — paginated, optional ?status=funded,shipped filter
 router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
   const { publicKey, role } = req.user!;
   const col = role === 'Farmer' ? 'farmer_pk' : 'buyer_pk';
+
+  const limit = Math.min(parseInt(req.query.limit as string ?? '50', 10), 100);
+  const offset = parseInt(req.query.offset as string ?? '0', 10);
+  const statusFilter = typeof req.query.status === 'string' ? req.query.status.split(',') : null;
+
   try {
+    const values: unknown[] = [publicKey];
+    let statusClause = '';
+    if (statusFilter && statusFilter.length > 0) {
+      const placeholders = statusFilter.map((_, i) => `$${i + 2}`).join(',');
+      statusClause = `AND o.status IN (${placeholders})`;
+      values.push(...statusFilter);
+    }
+    values.push(limit, offset);
+    const limitIdx = values.length - 1;
+    const offsetIdx = values.length;
+
     const result = await pool.query(
-      `SELECT o.*, p.name AS product_name FROM orders o
+      `SELECT o.*, p.name AS product_name, p.image_cids
+       FROM orders o
        LEFT JOIN products p ON o.product_id = p.id
-       WHERE o.${col} = $1 ORDER BY o.created_at DESC`,
-      [publicKey],
+       WHERE o.${col} = $1 ${statusClause}
+       ORDER BY o.created_at DESC
+       LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      values,
     );
-    res.json({ orders: result.rows });
+
+    const countValues: unknown[] = [publicKey];
+    let countStatusClause = '';
+    if (statusFilter && statusFilter.length > 0) {
+      const placeholders = statusFilter.map((_, i) => `$${i + 2}`).join(',');
+      countStatusClause = `AND status IN (${placeholders})`;
+      countValues.push(...statusFilter);
+    }
+    const countResult = await pool.query(
+      `SELECT COUNT(*) AS total FROM orders WHERE ${col} = $1 ${countStatusClause}`,
+      countValues,
+    );
+
+    res.json({ orders: result.rows, total: parseInt(countResult.rows[0].total, 10) });
   } catch {
     res.status(500).json({ error: 'Failed to fetch orders' });
   }
 });
 
-// GET /orders/:id
+// GET /orders/:id  — includes product info + dispute record
 router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
-    const result = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
+    const result = await pool.query(
+      `SELECT o.*,
+         p.name AS product_name, p.image_cids, p.unit, p.category, p.status AS product_status,
+         d.id AS dispute_id, d.raised_by AS dispute_raised_by, d.reason AS dispute_reason,
+         d.status AS dispute_status, d.resolution AS dispute_resolution,
+         d.created_at AS dispute_created_at
+       FROM orders o
+       LEFT JOIN products p ON o.product_id = p.id
+       LEFT JOIN disputes d ON d.order_id = o.id
+       WHERE o.id = $1`,
+      [req.params.id],
+    );
     if (!result.rows[0]) {
       res.status(404).json({ error: 'Not found' });
       return;
     }
     const order = result.rows[0];
-    // Only the parties to the order may view it
     if (order.buyer_pk !== req.user!.publicKey && order.farmer_pk !== req.user!.publicKey && req.user!.role !== 'Admin') {
       res.status(403).json({ error: 'Forbidden' });
       return;
@@ -48,6 +90,10 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     res.status(400).json({ error: 'productId and quantity required' });
     return;
   }
+  if (!deliveryAddress || !String(deliveryAddress).trim()) {
+    res.status(400).json({ error: 'deliveryAddress is required' });
+    return;
+  }
   try {
     const productRes = await pool.query('SELECT * FROM products WHERE id = $1', [productId]);
     if (!productRes.rows[0]) {
@@ -60,16 +106,15 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
       return;
     }
     if (p.quantity < quantity) {
-      res.status(409).json({ error: 'Insufficient product quantity' });
+      res.status(409).json({ error: 'Insufficient product quantity', available: p.quantity });
       return;
     }
     const amount = BigInt(p.price_xlm) * BigInt(quantity);
     const result = await pool.query(
-      `INSERT INTO orders (product_id, farmer_pk, buyer_pk, amount, delivery_address, status)
-       VALUES ($1, $2, $3, $4, $5, 'created') RETURNING *`,
-      [productId, p.farmer_pk, req.user!.publicKey, amount.toString(), deliveryAddress ?? null],
+      `INSERT INTO orders (product_id, farmer_pk, buyer_pk, amount, quantity, delivery_address, status)
+       VALUES ($1, $2, $3, $4, $5, $6, 'created') RETURNING *`,
+      [productId, p.farmer_pk, req.user!.publicKey, amount.toString(), quantity, deliveryAddress],
     );
-    // Decrement product quantity; auto-mark sold when exhausted
     await pool.query(
       `UPDATE products
          SET quantity = GREATEST(quantity - $1, 0),
@@ -112,6 +157,41 @@ router.patch('/:id/fund', authMiddleware, async (req: AuthRequest, res: Response
   }
 });
 
+// DELETE /orders/:id  — buyer only, cancels a 'created' (unfunded) order
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
+    if (!orderRes.rows[0]) {
+      res.status(404).json({ error: 'Order not found' });
+      return;
+    }
+    const order = orderRes.rows[0];
+    if (order.buyer_pk !== req.user!.publicKey) {
+      res.status(403).json({ error: 'Only the buyer can cancel this order' });
+      return;
+    }
+    if (order.status !== 'created') {
+      res.status(409).json({ error: 'Only unfunded orders can be cancelled' });
+      return;
+    }
+    await pool.query(
+      `UPDATE orders SET status='cancelled', updated_at=NOW() WHERE id=$1`,
+      [req.params.id],
+    );
+    // Restore product quantity
+    await pool.query(
+      `UPDATE products
+         SET quantity = quantity + $1,
+             status   = CASE WHEN status = 'sold' THEN 'active' ELSE status END
+       WHERE id = $2`,
+      [order.quantity ?? 1, order.product_id],
+    );
+    res.json({ ok: true });
+  } catch {
+    res.status(500).json({ error: 'Failed to cancel order' });
+  }
+});
+
 // POST /orders/:id/ship  — farmer only
 router.post('/:id/ship', authMiddleware, async (req: AuthRequest, res: Response) => {
   try {
@@ -124,12 +204,12 @@ router.post('/:id/ship', authMiddleware, async (req: AuthRequest, res: Response)
       res.status(403).json({ error: 'Only the farmer can mark this order as shipped' });
       return;
     }
-    const { trackingInfo } = req.body;
+    const { trackingInfo, txHash } = req.body;
     const result = await pool.query(
-      `UPDATE orders SET status='shipped', tracking_info=$1, updated_at=NOW()
-       WHERE id=$2 AND status='funded'
+      `UPDATE orders SET status='shipped', tracking_info=$1, tx_hash=$2, updated_at=NOW()
+       WHERE id=$3 AND status='funded'
        RETURNING id`,
-      [trackingInfo ?? null, req.params.id],
+      [trackingInfo ?? null, txHash ?? null, req.params.id],
     );
     if (result.rowCount === 0) {
       res.status(409).json({ error: 'Order is not in funded state' });
@@ -220,7 +300,6 @@ router.patch('/:id/resolve', authMiddleware, async (req: AuthRequest, res: Respo
       res.status(400).json({ error: 'farmerBps must be 0-10000' });
       return;
     }
-    // Only set 'completed' for a 100% farmer payout; partial = 'resolved'
     const status = farmerBps === 0 ? 'refunded' : farmerBps === 10_000 ? 'completed' : 'resolved';
     const result = await pool.query(
       `UPDATE orders SET status=$1, updated_at=NOW() WHERE id=$2 AND status='disputed' RETURNING id`,
