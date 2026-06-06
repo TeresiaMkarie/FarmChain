@@ -79,3 +79,24 @@ export interface ApiUser {
   chainVerified: boolean;
   createdAt: string;
 }
+
+export interface UserProfile {
+  public_key: string;
+  role: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  location: string | null;
+  country: string | null;
+  county: string | null;
+  city: string | null;
+  address_line: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  payout_wallet: string | null;
+  preferred_currency: string;
+  preferred_language: string;
+  kyc_status: string;
+  chain_verified: boolean;
+}
