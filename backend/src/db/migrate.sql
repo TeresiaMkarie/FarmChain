@@ -14,9 +14,10 @@ ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_address TEXT;
 -- Add CHECK constraint to orders.status (PostgreSQL 12+)
 -- Note: existing rows with non-conforming values will cause this to fail.
 -- Clean them up first if needed: UPDATE orders SET status='created' WHERE status NOT IN (...)
-ALTER TABLE orders
-  ADD CONSTRAINT orders_status_check
-  CHECK (status IN ('created','funded','shipped','completed','disputed','refunded','resolved'));
+-- Drop old constraint (may not include 'cancelled') and replace with correct one
+ALTER TABLE orders DROP CONSTRAINT IF EXISTS orders_status_check;
+ALTER TABLE orders ADD CONSTRAINT orders_status_check
+  CHECK (status IN ('created','funded','shipped','completed','disputed','refunded','resolved','cancelled'));
 
 -- Add CHECK constraint to disputes.status
 ALTER TABLE disputes
@@ -60,6 +61,9 @@ CREATE TABLE IF NOT EXISTS user_notifications (
   promo_sms         BOOLEAN NOT NULL DEFAULT FALSE,
   updated_at        TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Add quantity column to orders
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS quantity INTEGER NOT NULL DEFAULT 1;
 
 -- Sessions table
 CREATE TABLE IF NOT EXISTS user_sessions (
