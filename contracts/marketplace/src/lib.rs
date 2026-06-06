@@ -107,6 +107,8 @@ impl MarketplaceContract {
         quantity: u64,
     ) {
         farmer.require_auth();
+        assert!(price > 0, "price must be positive");
+        assert!(quantity > 0, "quantity must be positive");
 
         let mut product: Product = env
             .storage()
