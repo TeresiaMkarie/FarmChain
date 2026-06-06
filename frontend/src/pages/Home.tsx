@@ -123,7 +123,12 @@ export default function Home() {
 
           {/* Right — illustration */}
           <div className="hidden lg:flex items-center justify-center">
-            <HeroIllustration />
+            <img
+              src="/Farmchain.jpeg"
+              alt="Farm illustration"
+              //className="w-full h-auto max-w-2xl drop-shadow-2xl rounded-2xl"
+              className="w-full h-full object-cover max-w-2xl drop-shadow-2xl rounded-2xl"
+            />
           </div>
 
         </div>
