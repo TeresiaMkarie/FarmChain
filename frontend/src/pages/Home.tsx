@@ -88,9 +88,7 @@ export default function Home() {
 
           {/* Left — text */}
           <div className="flex flex-col gap-7">
-            <span className="self-start bg-green-600/50 border border-green-400/40 text-green-100 text-sm font-medium px-4 py-1.5 rounded-full">
-              Built on Stellar · Powered by Soroban
-            </span>
+            
 
             <h1 className="text-5xl sm:text-6xl font-extrabold leading-tight">
               Farm to Buyer,<br />
@@ -283,3 +281,4 @@ export default function Home() {
     </div>
   );
 }
+
