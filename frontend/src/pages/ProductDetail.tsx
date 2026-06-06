@@ -1,13 +1,25 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useProduct } from '../hooks/useProducts';
 import { useWalletStore } from '../store/walletStore';
-import { createOrder as createOrderApi, fundOrder } from '../lib/api';
+import { createOrder as createOrderApi, fundOrder, getUser } from '../lib/api';
 import { createOrder as createOrderChain } from '../lib/soroban';
 import { stroopsToXlm } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
 import { parseError } from '../lib/errors';
+
+function buildAddressFromProfile(u: {
+  address_line?: string | null;
+  city?: string | null;
+  county?: string | null;
+  country?: string | null;
+  location?: string | null;
+}): string {
+  const parts = [u.address_line, u.city, u.county, u.country].filter(Boolean);
+  if (parts.length) return parts.join(', ');
+  return u.location ?? '';
+}
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -16,8 +28,21 @@ export default function ProductDetail() {
   const navigate = useNavigate();
 
   const [quantity, setQuantity] = useState(1);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [addressLoaded, setAddressLoaded] = useState(false);
   const [toast, setToast] = useState<{ status: 'pending' | 'success' | 'error'; message?: string } | null>(null);
   const [buying, setBuying] = useState(false);
+
+  useEffect(() => {
+    if (!publicKey || addressLoaded) return;
+    getUser(publicKey)
+      .then((res) => {
+        const saved = buildAddressFromProfile(res.data.user ?? {});
+        if (saved) setDeliveryAddress(saved);
+      })
+      .catch(() => {})
+      .finally(() => setAddressLoaded(true));
+  }, [publicKey, addressLoaded]);
 
   const handleBuy = async () => {
     if (!publicKey) {
@@ -30,7 +55,7 @@ export default function ProductDetail() {
 
     try {
       // 1. Create order record in DB
-      const orderRes = await createOrderApi({ productId: product.id, quantity });
+      const orderRes = await createOrderApi({ productId: product.id, quantity, deliveryAddress });
       const { orderId } = orderRes.data;
 
       // 2. Use a timestamp as a unique on-chain order ID (fits u64)
@@ -148,9 +173,43 @@ export default function ProductDetail() {
                 <strong className="text-green-700">{totalXlm} XLM</strong>
               </span>
             </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  Delivery / pick-up address
+                </label>
+                {deliveryAddress && (
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryAddress('')}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <textarea
+                rows={2}
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                placeholder="Enter your delivery or pick-up address…"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+              />
+              {!deliveryAddress.trim() && (
+                <p className="text-xs text-amber-600">
+                  Address is required.{' '}
+                  <Link to="/settings" className="underline">
+                    Save one in your profile
+                  </Link>{' '}
+                  to auto-fill next time.
+                </p>
+              )}
+            </div>
+
             <button
               onClick={handleBuy}
-              disabled={buying}
+              disabled={buying || !deliveryAddress.trim()}
               className="w-full bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition"
             >
               {buying ? 'Processing…' : `Buy for ${totalXlm} XLM`}
