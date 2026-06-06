@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { createProduct, activateProduct } from '../lib/api';
+import { createProduct, activateProduct, delistProduct } from '../lib/api';
 import { listProduct } from '../lib/soroban';
 import { useWalletStore } from '../store/walletStore';
 import { xlmToStroops } from '../lib/stellar';
@@ -19,7 +19,9 @@ const schema = z.object({
   description: z.string().optional(),
 });
 
-type FormData = z.infer<typeof schema>;
+// Separate input (raw field values) from output (after coercion) to satisfy RHF v7 generics
+type ListProductInput = z.input<typeof schema>;
+type ListProductOutput = z.output<typeof schema>;
 
 export default function ListProduct() {
   const { publicKey } = useWalletStore();
@@ -27,16 +29,16 @@ export default function ListProduct() {
   const [images, setImages] = useState<FileList | null>(null);
   const [toast, setToast] = useState<{ status: 'pending' | 'success' | 'error'; message?: string } | null>(null);
 
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<FormData>({
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<ListProductInput, unknown, ListProductOutput>({
     resolver: zodResolver(schema),
   });
 
-  const onSubmit = async (data: FormData) => {
+  const onSubmit = async (data: ListProductOutput) => {
     if (!publicKey) return;
     setToast({ status: 'pending', message: 'Uploading product…' });
 
     try {
-      // 1. Create off-chain record and get metadata hash
+      // Step 1: create off-chain record
       const form = new FormData();
       Object.entries(data).forEach(([k, v]) => form.append(k, String(v)));
       if (images) Array.from(images).forEach((f) => form.append('images', f));
@@ -44,21 +46,37 @@ export default function ListProduct() {
       const res = await createProduct(form);
       const { productId, metadataHash } = res.data;
 
-      // 2. List on-chain — returns on-chain ID once confirmed
+      // Step 2+3: sign on-chain then activate — isolated so we can clean up on failure
       setToast({ status: 'pending', message: 'Signing transaction…' });
-      const { txHash, onChainId } = await listProduct(
-        publicKey,
-        BigInt(xlmToStroops(data.priceXlm)),
-        BigInt(data.quantity),
-        metadataHash,
-      );
-
-      // 3. Activate the DB record with the on-chain ID
-      await activateProduct(productId, { onChainId, txHash });
+      try {
+        const { txHash, onChainId } = await listProduct(
+          publicKey,
+          BigInt(xlmToStroops(data.priceXlm)),
+          BigInt(data.quantity),
+          metadataHash,
+        );
+        await activateProduct(productId, { onChainId, txHash });
+      } catch (sorobanErr) {
+        const msg = sorobanErr instanceof Error ? sorobanErr.message : '';
+        if (/timed? ?out/i.test(msg)) {
+          // Transaction may have landed — leave the pending record so the farmer
+          // can activate it from the dashboard if the tx went through.
+          setToast({
+            status: 'error',
+            message: 'Transaction timed out. Your draft was saved — check your dashboard to activate it.',
+          });
+          setTimeout(() => navigate('/farmer/dashboard'), 3000);
+          return;
+        }
+        // Transaction never landed (rejected / cancelled / failed) — delete the
+        // orphaned pending record so a retry starts clean.
+        try { await delistProduct(productId); } catch { /* ignore cleanup errors */ }
+        throw sorobanErr;
+      }
 
       setToast({ status: 'success', message: 'Product listed successfully!' });
       setTimeout(() => navigate('/farmer/dashboard'), 1500);
-    } catch (err: any) {
+    } catch (err) {
       setToast({ status: 'error', message: parseError(err) });
     }
   };
