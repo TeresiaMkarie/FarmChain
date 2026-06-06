@@ -2,6 +2,9 @@
 -- current schema without wiping data.  Skip any statement that fails with
 -- "already exists" — it means the column/constraint is already in place.
 
+-- Add on_chain_id column to products (Soroban marketplace product ID)
+ALTER TABLE products ADD COLUMN IF NOT EXISTS on_chain_id BIGINT;
+
 -- Add tx_hash column to products (used by activate endpoint)
 ALTER TABLE products ADD COLUMN IF NOT EXISTS tx_hash TEXT;
 
