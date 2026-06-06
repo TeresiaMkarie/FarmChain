@@ -11,11 +11,11 @@ export default function AuthPage() {
   const [name, setName] = useState('');
 
   const handleConnect = async () => {
-    const pk = await connect(isNew ? role : undefined, isNew ? name : undefined);
-    if (!pk) return;
+    const result = await connect(isNew ? role : undefined, isNew ? name : undefined);
+    if (!result) return;
 
-    const storedRole = role;
-    if (storedRole === 'Farmer') navigate('/farmer/dashboard');
+    // Use the role returned from the server (not the local state default)
+    if (result.role === 'Farmer') navigate('/farmer/dashboard');
     else navigate('/buyer/dashboard');
   };
 
