@@ -14,6 +14,7 @@ function toProduct(raw: any): Product {
     priceXlm: raw.price_xlm,
     imageCids: raw.image_cids ?? [],
     metadataHash: raw.metadata_hash,
+    description: raw.description,
     status: raw.status,
     createdAt: raw.created_at,
     farmerName: raw.farmer_name,
@@ -28,16 +29,18 @@ export function useProducts(params?: Record<string, string>) {
 
   const paramsKey = params ? JSON.stringify(params) : '';
 
-  useEffect(() => {
+  const fetch = () => {
     setLoading(true);
     setError(null);
     getProducts(params)
       .then((res) => setProducts((res.data.products ?? []).map(toProduct)))
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
-  }, [paramsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  };
 
-  return { products, loading, error, setProducts };
+  useEffect(fetch, [paramsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return { products, loading, error, setProducts, refresh: fetch };
 }
 
 export function useProduct(id: string) {

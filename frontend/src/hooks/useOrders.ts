@@ -18,6 +18,7 @@ function toOrder(raw: any): Order {
     createdAt: raw.created_at,
     updatedAt: raw.updated_at,
     product: raw.product,
+    productName: raw.product_name,
   };
 }
 
