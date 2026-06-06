@@ -83,12 +83,24 @@ router.post('/', authMiddleware, upload.array('images', 5), async (req: AuthRequ
     res.status(403).json({ error: 'Only farmers can list products' });
     return;
   }
+  // Convert XLM to stroops (1 XLM = 10_000_000 stroops) for BIGINT storage
+  const priceStroops = Math.round(parseFloat(priceXlm) * 10_000_000);
+  if (!isFinite(priceStroops) || priceStroops <= 0) {
+    res.status(400).json({ error: 'price must be a positive number' });
+    return;
+  }
+
   const files = req.files as Express.Multer.File[];
   try {
     const cids: string[] = [];
     for (const file of files ?? []) {
-      const cid = await pinToIPFS(file.buffer, file.originalname);
-      cids.push(cid);
+      try {
+        const cid = await pinToIPFS(file.buffer, file.originalname);
+        cids.push(cid);
+      } catch (uploadErr: any) {
+        // Log but don't block product creation if IPFS upload fails
+        console.error('IPFS upload failed for', file.originalname, ':', uploadErr.response?.data ?? uploadErr.message);
+      }
     }
     const crypto = await import('crypto');
     const metaObj = { name, category, quantity, unit, priceXlm, farmerPk: req.user!.publicKey };
@@ -97,10 +109,11 @@ router.post('/', authMiddleware, upload.array('images', 5), async (req: AuthRequ
     const result = await pool.query(
       `INSERT INTO products (farmer_pk, name, category, quantity, unit, price_xlm, image_cids, metadata_hash, description)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [req.user!.publicKey, name, category, quantity, unit, priceXlm, cids, metadataHash, description ?? null],
+      [req.user!.publicKey, name, category, quantity, unit, priceStroops, cids, metadataHash, description ?? null],
     );
     res.json({ product: result.rows[0], productId: result.rows[0].id, metadataHash });
   } catch (err: any) {
+    console.error('[products POST] error:', err?.message, err?.code, err?.detail);
     res.status(500).json({ error: err.message ?? 'Failed to create product' });
   }
 });
@@ -124,8 +137,9 @@ router.patch('/:id/activate', authMiddleware, async (req: AuthRequest, res: Resp
       return;
     }
     res.json({ ok: true });
-  } catch {
-    res.status(500).json({ error: 'Failed to activate product' });
+  } catch (err: any) {
+    console.error('[products PATCH activate] error:', err?.message, err?.code, err?.detail);
+    res.status(500).json({ error: err.message ?? 'Failed to activate product' });
   }
 });
 
