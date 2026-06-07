@@ -11,12 +11,14 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
   const limit = Math.min(parseInt(req.query.limit as string ?? '50', 10), 100);
   const offset = parseInt(req.query.offset as string ?? '0', 10);
-  const statusFilter = typeof req.query.status === 'string' ? req.query.status.split(',') : null;
+  const ALLOWED_STATUSES = new Set(['created','funded','shipped','completed','disputed','refunded','resolved','cancelled']);
+  const rawStatuses = typeof req.query.status === 'string' ? req.query.status.split(',') : [];
+  const statusFilter = rawStatuses.filter((s) => ALLOWED_STATUSES.has(s));
 
   try {
     const values: unknown[] = [publicKey];
     let statusClause = '';
-    if (statusFilter && statusFilter.length > 0) {
+    if (statusFilter.length > 0) {
       const placeholders = statusFilter.map((_, i) => `$${i + 2}`).join(',');
       statusClause = `AND o.status IN (${placeholders})`;
       values.push(...statusFilter);
@@ -37,7 +39,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     const countValues: unknown[] = [publicKey];
     let countStatusClause = '';
-    if (statusFilter && statusFilter.length > 0) {
+    if (statusFilter.length > 0) {
       const placeholders = statusFilter.map((_, i) => `$${i + 2}`).join(',');
       countStatusClause = `AND status IN (${placeholders})`;
       countValues.push(...statusFilter);
