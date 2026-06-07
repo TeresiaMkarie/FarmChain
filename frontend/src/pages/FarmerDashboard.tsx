@@ -125,7 +125,12 @@ export default function FarmerDashboard() {
     setToast({ status: 'success', message: 'Product updated.' });
   };
 
-  const btnSm = 'px-2.5 py-1 rounded-lg text-xs font-medium transition';
+  // Button variants — all share the same size so nothing looks cramped
+  const btn      = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition';
+  const btnPrimary     = `${btn} bg-green-700 hover:bg-green-600 text-white`;
+  const btnSecondary   = `${btn} border border-green-700 text-green-700 hover:bg-green-50`;
+  const btnGhost       = `${btn} border border-gray-300 text-gray-600 hover:bg-gray-50`;
+  const btnDanger      = `${btn} bg-green-900 hover:bg-green-950 text-white`;
 
   const pagedProducts = products.slice((productPage - 1) * PAGE, productPage * PAGE);
   const productPages = Math.ceil(products.length / PAGE);
@@ -196,9 +201,9 @@ export default function FarmerDashboard() {
                 </div>
                 <button
                   onClick={() => setShipModal(o)}
-                  className={`${btnSm} bg-orange-500 hover:bg-orange-400 text-white`}
+                  className={btnPrimary}
                 >
-                  Ship
+                  Ship order
                 </button>
               </div>
             ))}
@@ -215,14 +220,14 @@ export default function FarmerDashboard() {
                   <button
                     onClick={() => handleActivate(p)}
                     disabled={activatingId === String(p.id)}
-                    className={`${btnSm} bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-white`}
+                    className={`${btnPrimary} disabled:opacity-50`}
                   >
                     {activatingId === String(p.id) ? 'Activating…' : 'Activate'}
                   </button>
                   <button
                     onClick={() => handleDeleteDraft(p)}
                     disabled={activatingId === String(p.id)}
-                    className={`${btnSm} bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 disabled:opacity-50`}
+                    className={`${btnGhost} disabled:opacity-50`}
                   >
                     Delete draft
                   </button>
@@ -241,9 +246,9 @@ export default function FarmerDashboard() {
                 </div>
                 <Link
                   to={`/orders/${o.id}`}
-                  className={`${btnSm} bg-red-100 hover:bg-red-200 text-red-700`}
+                  className={btnSecondary}
                 >
-                  View
+                  View dispute
                 </Link>
               </div>
             ))}
@@ -293,20 +298,20 @@ export default function FarmerDashboard() {
                       <td className="px-4 py-3">{stroopsToXlm(p.priceXlm).toFixed(2)}</td>
                       <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           {p.status === 'pending' && (
                             <button
                               onClick={() => handleActivate(p)}
                               disabled={activatingId === String(p.id)}
-                              className={`${btnSm} bg-yellow-100 hover:bg-yellow-200 disabled:opacity-50 text-yellow-800`}
+                              className={`${btnPrimary} disabled:opacity-50`}
                             >
-                              {activatingId === String(p.id) ? '…' : 'Activate'}
+                              {activatingId === String(p.id) ? 'Activating…' : 'Activate'}
                             </button>
                           )}
                           {(p.status === 'active' || p.status === 'pending') && (
                             <button
                               onClick={() => setEditModal(p)}
-                              className={`${btnSm} bg-blue-50 hover:bg-blue-100 text-blue-700`}
+                              className={btnSecondary}
                             >
                               Edit
                             </button>
@@ -314,7 +319,7 @@ export default function FarmerDashboard() {
                           {(p.status === 'active' || p.status === 'pending') && (
                             <button
                               onClick={() => setConfirmDelistId(String(p.id))}
-                              className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
+                              className={btnDanger}
                             >
                               Delist
                             </button>
@@ -322,7 +327,7 @@ export default function FarmerDashboard() {
                           {(p.status === 'sold' || p.status === 'cancelled') && (
                             <Link
                               to="/farmer/list-product"
-                              className={`${btnSm} bg-gray-100 hover:bg-gray-200 text-gray-600`}
+                              className={btnSecondary}
                             >
                               Re-list
                             </Link>
@@ -404,12 +409,22 @@ export default function FarmerDashboard() {
                     <span className="font-semibold text-green-700">{stroopsToXlm(Number(o.amount)).toFixed(2)} XLM</span>
                   </div>
                   {o.status === 'funded' ? (
-                    <button onClick={() => setShipModal(o)} className="w-full text-center text-xs bg-orange-500 hover:bg-orange-400 text-white rounded-lg py-1.5 font-medium">
-                      Ship Order
+                    <button
+                      onClick={() => setShipModal(o)}
+                      className="w-full text-center text-xs bg-green-700 hover:bg-green-600 text-white rounded-xl py-2 font-semibold transition"
+                    >
+                      Ship order
                     </button>
                   ) : (
-                    <Link to={`/orders/${o.id}`} className={`block text-center text-xs font-medium rounded-lg py-1.5 ${o.status === 'disputed' ? 'bg-red-50 text-red-600' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
-                      {o.status === 'disputed' ? 'View Dispute' : 'View'}
+                    <Link
+                      to={`/orders/${o.id}`}
+                      className={`block text-center text-xs font-semibold rounded-xl py-2 transition ${
+                        o.status === 'disputed'
+                          ? 'border border-green-700 text-green-700 hover:bg-green-50'
+                          : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {o.status === 'disputed' ? 'View dispute' : 'View order'}
                     </Link>
                   )}
                 </div>
@@ -440,25 +455,25 @@ export default function FarmerDashboard() {
                       {o.status === 'funded' && (
                         <button
                           onClick={() => setShipModal(o)}
-                          className={`${btnSm} bg-green-100 hover:bg-green-200 text-green-700`}
+                          className={btnPrimary}
                         >
-                          Ship
+                          Ship order
                         </button>
                       )}
                       {o.status === 'disputed' && (
                         <Link
                           to={`/orders/${o.id}`}
-                          className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
+                          className={btnSecondary}
                         >
-                          Dispute
+                          View dispute
                         </Link>
                       )}
                       {!['funded', 'disputed'].includes(o.status) && (
                         <Link
                           to={`/orders/${o.id}`}
-                          className={`${btnSm} bg-gray-100 hover:bg-gray-200 text-gray-600`}
+                          className={btnGhost}
                         >
-                          View
+                          View order
                         </Link>
                       )}
                     </td>
@@ -528,9 +543,9 @@ export default function FarmerDashboard() {
                       <td className="px-4 py-3">
                         <Link
                           to={`/orders/${d.orderId}`}
-                          className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
+                          className={btnSecondary}
                         >
-                          View
+                          View dispute
                         </Link>
                       </td>
                     </tr>
