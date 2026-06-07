@@ -12,6 +12,9 @@ backend/node_modules/
 frontend/dist/
 backend/dist/
 
+# Uploads (user-generated files — served from disk, not tracked in git)
+uploads/
+
 # Misc
 .DS_Store
 *.log
