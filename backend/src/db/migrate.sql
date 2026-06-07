@@ -78,3 +78,14 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_sessions_public_key ON user_sessions(public_key);
 CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON user_sessions(token_hash);
+
+-- P1: Indexes on high-query columns to avoid full table scans on dashboard loads
+CREATE INDEX IF NOT EXISTS idx_orders_farmer_pk  ON orders(farmer_pk);
+CREATE INDEX IF NOT EXISTS idx_orders_buyer_pk   ON orders(buyer_pk);
+CREATE INDEX IF NOT EXISTS idx_orders_status     ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_products_farmer_pk ON products(farmer_pk);
+CREATE INDEX IF NOT EXISTS idx_products_status   ON products(status);
+
+-- A2: User suspension mechanism
+ALTER TABLE users ADD COLUMN IF NOT EXISTS suspended_at       TIMESTAMPTZ;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS suspension_reason  TEXT;

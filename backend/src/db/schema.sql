@@ -7,8 +7,10 @@ CREATE TABLE IF NOT EXISTS users (
   phone         TEXT,
   location      TEXT,
   kyc_status    TEXT NOT NULL DEFAULT 'pending' CHECK (kyc_status IN ('pending','verified','rejected')),
-  chain_verified BOOLEAN NOT NULL DEFAULT FALSE,
-  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  chain_verified    BOOLEAN NOT NULL DEFAULT FALSE,
+  suspended_at      TIMESTAMPTZ,
+  suspension_reason TEXT,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
 -- Products
@@ -59,6 +61,13 @@ CREATE TABLE IF NOT EXISTS disputes (
   resolution  TEXT,
   created_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
+
+-- P1: Indexes for dashboard query performance
+CREATE INDEX IF NOT EXISTS idx_orders_farmer_pk   ON orders(farmer_pk);
+CREATE INDEX IF NOT EXISTS idx_orders_buyer_pk    ON orders(buyer_pk);
+CREATE INDEX IF NOT EXISTS idx_orders_status      ON orders(status);
+CREATE INDEX IF NOT EXISTS idx_products_farmer_pk ON products(farmer_pk);
+CREATE INDEX IF NOT EXISTS idx_products_status    ON products(status);
 
 -- Receipts
 CREATE TABLE IF NOT EXISTS receipts (
