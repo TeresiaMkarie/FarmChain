@@ -129,7 +129,7 @@ export default function FarmerDashboard() {
       </div>
 
       {/* ── Earnings panel ── */}
-      <div className="grid grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-3 gap-4 mb-3">
         {[
           { label: 'Completed Earnings', value: completedEarnings, colour: 'text-green-700', bg: 'bg-green-50' },
           { label: 'In Escrow', value: inEscrow, colour: 'text-blue-700', bg: 'bg-blue-50' },
@@ -140,6 +140,15 @@ export default function FarmerDashboard() {
             <p className="text-gray-500 text-sm mt-1">{label}</p>
           </div>
         ))}
+      </div>
+
+      <div className="flex items-start gap-2 bg-green-50 border border-green-100 rounded-xl px-4 py-3 mb-8 text-xs text-green-800">
+        <span className="shrink-0 text-base leading-tight">ℹ️</span>
+        <div className="space-y-1">
+          <p><strong>How you get paid:</strong> When a buyer confirms delivery, XLM goes straight to your Stellar wallet — nothing to withdraw.</p>
+          <p><strong>In Escrow:</strong> Funds are held safely until the buyer confirms or a dispute is settled.</p>
+          <p>Your live balance is shown in the wallet menu at the top of the page.</p>
+        </div>
       </div>
 
       {/* ── Action Inbox ── */}
