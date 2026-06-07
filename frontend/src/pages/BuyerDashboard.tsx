@@ -1,13 +1,30 @@
 import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { useWalletStore } from '../store/walletStore';
 import { useOrders } from '../hooks/useOrders';
-import { exportOrders } from '../lib/api';
+import { exportOrders, getRecurringOrders, createRecurringOrder, pauseResumeRecurring, deleteRecurringOrder } from '../lib/api';
 import StatusBadge from '../components/shared/StatusBadge';
 import { shortAddress, stroopsToXlm } from '../lib/stellar';
+
+interface RecurringOrder {
+  id: string;
+  product_name: string;
+  quantity: number;
+  frequency: string;
+  next_due_at: string;
+  active: boolean;
+}
 
 export default function BuyerDashboard() {
   const { publicKey } = useWalletStore();
   const { orders, loading, error } = useOrders();
+  const [recurring, setRecurring] = useState<RecurringOrder[]>([]);
+  const [showRecurringForm, setShowRecurringForm] = useState<string | null>(null);
+  const [recFreq, setRecFreq] = useState<'weekly' | 'fortnightly' | 'monthly'>('monthly');
+
+  useEffect(() => {
+    getRecurringOrders().then((r) => setRecurring(r.data.recurring)).catch(() => {});
+  }, []);
 
   const myOrders = orders.filter((o) => o.buyerPk === publicKey);
   const totalSpent = myOrders
@@ -115,10 +132,48 @@ export default function BuyerDashboard() {
                     <td className="px-4 py-3 text-gray-700">{o.product?.name ?? `#${o.productId}`}</td>
                     <td className="px-4 py-3">{stroopsToXlm(o.amount).toFixed(2)}</td>
                     <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
-                    <td className="px-4 py-3">
+                    <td className="px-4 py-3 space-x-2">
                       <Link to={`/orders/${o.id}`} className="text-green-700 hover:underline text-xs font-medium">
                         View
                       </Link>
+                      {o.status === 'completed' && o.productId && (
+                        <button
+                          onClick={() => setShowRecurringForm(showRecurringForm === o.id ? null : o.id)}
+                          className="text-xs text-purple-600 hover:underline font-medium"
+                        >
+                          {recurring.some((r) => r.id === o.id) ? 'Recurring ✓' : 'Repeat'}
+                        </button>
+                      )}
+                      {showRecurringForm === o.id && (
+                        <div className="mt-2 flex items-center gap-2 flex-wrap">
+                          <select
+                            value={recFreq}
+                            onChange={(e) => setRecFreq(e.target.value as typeof recFreq)}
+                            className="border border-gray-300 rounded-lg px-2 py-1 text-xs"
+                          >
+                            <option value="weekly">Weekly</option>
+                            <option value="fortnightly">Fortnightly</option>
+                            <option value="monthly">Monthly</option>
+                          </select>
+                          <button
+                            onClick={async () => {
+                              try {
+                                const r = await createRecurringOrder({
+                                  productId: o.productId,
+                                  quantity: 1,
+                                  frequency: recFreq,
+                                  deliveryAddress: '',
+                                });
+                                setRecurring((prev) => [...prev, r.data.recurring]);
+                                setShowRecurringForm(null);
+                              } catch { /* ignore */ }
+                            }}
+                            className="bg-purple-600 text-white text-xs px-3 py-1 rounded-lg hover:bg-purple-700"
+                          >
+                            Save
+                          </button>
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -127,6 +182,50 @@ export default function BuyerDashboard() {
           </div>
         )}
       </section>
+
+      {/* Recurring orders */}
+      {recurring.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-xl font-semibold text-gray-700 mb-4">Recurring Orders</h2>
+          <div className="space-y-3">
+            {recurring.map((r) => (
+              <div key={r.id} className="bg-white rounded-xl shadow p-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="font-medium text-gray-800">{r.product_name}</p>
+                  <p className="text-sm text-gray-500 capitalize">
+                    {r.frequency} · Qty {r.quantity} · Next: {new Date(r.next_due_at).toLocaleDateString()}
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    onClick={async () => {
+                      try {
+                        await pauseResumeRecurring(r.id, !r.active);
+                        setRecurring((prev) => prev.map((x) => x.id === r.id ? { ...x, active: !x.active } : x));
+                      } catch { /* ignore */ }
+                    }}
+                    className={`text-xs px-3 py-1.5 rounded-lg font-medium border ${r.active ? 'border-amber-400 text-amber-600 hover:bg-amber-50' : 'border-green-600 text-green-700 hover:bg-green-50'}`}
+                  >
+                    {r.active ? 'Pause' : 'Resume'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!window.confirm('Cancel this recurring order?')) return;
+                      try {
+                        await deleteRecurringOrder(r.id);
+                        setRecurring((prev) => prev.filter((x) => x.id !== r.id));
+                      } catch { /* ignore */ }
+                    }}
+                    className="text-xs text-red-500 hover:text-red-700 px-2"
+                  >
+                    ✕
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }
