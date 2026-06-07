@@ -79,7 +79,7 @@ function verifySignature(publicKey: string, token: string, signedXDR: string): b
     const tx = new Transaction(signedXDR, NETWORK);
 
     // Confirm the MANAGE_DATA op contains our nonce
-    const op = tx.operations[0] as ReturnType<typeof Operation.manageData>;
+    const op = tx.operations[0] as unknown as { type: string; name: string; value: Buffer | undefined };
     if (op?.type !== 'manageData') return false;
     if (op.name !== 'FarmChain Auth') return false;
     if (!op.value || op.value.toString('utf8') !== payload.nonce) return false;
@@ -128,6 +128,7 @@ router.post('/register', async (req: Request, res: Response) => {
       { expiresIn: '7d' },
     );
     await recordSession(pool, user.public_key, authToken, req);
+    res.cookie('fc_token', authToken, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, secure: process.env.NODE_ENV === 'production' });
     res.json({ token: authToken, user: { id: user.id, publicKey: user.public_key, role: user.role, name: user.name } });
   } catch {
     res.status(500).json({ error: 'Registration failed' });
@@ -158,6 +159,7 @@ router.post('/login', async (req: Request, res: Response) => {
       { expiresIn: '7d' },
     );
     await recordSession(pool, user.public_key, authToken, req);
+    res.cookie('fc_token', authToken, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, secure: process.env.NODE_ENV === 'production' });
     res.json({ token: authToken, user: { id: user.id, publicKey: user.public_key, role: user.role, name: user.name } });
   } catch {
     res.status(500).json({ error: 'Login failed' });
@@ -172,6 +174,12 @@ router.get('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   } catch {
     res.status(500).json({ error: 'Failed to fetch user' });
   }
+});
+
+// POST /auth/logout  — clears the httpOnly cookie
+router.post('/logout', (_req, res: Response) => {
+  res.clearCookie('fc_token', { httpOnly: true, sameSite: 'lax', path: '/' });
+  res.json({ ok: true });
 });
 
 export default router;
