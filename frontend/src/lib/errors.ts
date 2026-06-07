@@ -74,7 +74,14 @@ export function parseError(err: unknown): string {
   }
 
   // ── Soroban / Freighter / wallet errors ──────────────────────────────────
-  const raw = typeof err === 'string' ? err : err instanceof Error ? err.message : '';
+  // Chrome extension errors (DOMException, runtime errors) are not instanceof Error
+  const raw: string = (() => {
+    if (typeof err === 'string') return err;
+    if (err instanceof Error) return err.message;
+    if (typeof (err as any)?.message === 'string') return (err as any).message;
+    const str = String(err);
+    return str === '[object Object]' ? '' : str;
+  })();
 
   if (/user.*(declined|rejected|cancel)/i.test(raw) || /cancel/i.test(raw)) {
     return 'Transaction cancelled.';
@@ -87,6 +94,15 @@ export function parseError(err: unknown): string {
   }
   if (/transaction rejected/i.test(raw)) {
     return 'Transaction rejected by the network. Please try again.';
+  }
+  if (/message channel closed/i.test(raw) || /listener indicated an asynchronous response/i.test(raw)) {
+    return 'Freighter closed before the transaction was signed. Please try again.';
+  }
+  if (/not initialised|not initialized|smart contract has not been set up/i.test(raw)) {
+    return 'The FarmChain contracts are not set up yet. Please contact the team.';
+  }
+  if (/contract simulation failed|HostError/i.test(raw)) {
+    return 'The transaction could not be simulated. Check your input or try again.';
   }
   if (/freighter/i.test(raw)) {
     return 'Wallet error. Check that Freighter is unlocked and try again.';

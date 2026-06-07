@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { useState } from 'react';
 import { useOrder } from '../hooks/useOrders';
 import { useWalletStore } from '../store/walletStore';
@@ -7,14 +7,17 @@ import { shipOrder, completeOrder, disputeOrder } from '../lib/api';
 import { stroopsToXlm, shortAddress } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
+import OrderTimeline from '../components/shared/OrderTimeline';
+import ReceiptModal from '../components/shared/ReceiptModal';
 import { parseError } from '../lib/errors';
 
 export default function OrderPage() {
   const { id } = useParams<{ id: string }>();
   const { order, loading, setOrder } = useOrder(id!);
-  const { publicKey } = useWalletStore();
+  const { publicKey, role } = useWalletStore();
   const [toast, setToast] = useState<{ status: 'pending' | 'success' | 'error'; message?: string } | null>(null);
   const [trackingInfo, setTrackingInfo] = useState('');
+  const [showReceipt, setShowReceipt] = useState(false);
 
   const isFarmer = publicKey === order?.farmerPk;
   const isBuyer = publicKey === order?.buyerPk;
@@ -27,7 +30,7 @@ export default function OrderPage() {
       await shipOrder(order.id, { trackingInfo, txHash });
       setOrder({ ...order, status: 'shipped' });
       setToast({ status: 'success', message: 'Order marked as shipped!' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({ status: 'error', message: parseError(err) });
     }
   };
@@ -40,7 +43,7 @@ export default function OrderPage() {
       await completeOrder(order.id, { txHash });
       setOrder({ ...order, status: 'completed' });
       setToast({ status: 'success', message: 'Delivery confirmed! Payment released to farmer.' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({ status: 'error', message: parseError(err) });
     }
   };
@@ -53,7 +56,7 @@ export default function OrderPage() {
       await disputeOrder(order.id, {});
       setOrder({ ...order, status: 'disputed' });
       setToast({ status: 'success', message: 'Dispute raised. Admin will review.' });
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({ status: 'error', message: parseError(err) });
     }
   };
@@ -61,9 +64,14 @@ export default function OrderPage() {
   if (loading) return <p className="p-10 text-gray-400">Loading order…</p>;
   if (!order) return <p className="p-10 text-red-500">Order not found.</p>;
 
+  const backTo = role === 'Farmer' ? '/farmer/dashboard' : '/buyer/dashboard';
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-10">
-      <h1 className="text-2xl font-bold text-green-800 mb-6">Order Detail</h1>
+      <Link to={backTo} className="inline-flex items-center gap-1 text-sm text-green-700 hover:underline mb-6">
+        ← Back to Dashboard
+      </Link>
+      <h1 className="text-2xl font-bold text-green-800 mb-4">Order Detail</h1>
 
       <div className="bg-white rounded-2xl shadow p-6 space-y-4">
         <div className="flex justify-between items-center">
@@ -97,6 +105,13 @@ export default function OrderPage() {
           </div>
         )}
 
+        <OrderTimeline
+          status={order.status}
+          createdAt={order.createdAt}
+          updatedAt={order.updatedAt}
+          trackingInfo={order.trackingInfo}
+        />
+
         {/* Actions */}
         <div className="pt-4 space-y-3">
           {isFarmer && order.status === 'funded' && (
@@ -126,7 +141,7 @@ export default function OrderPage() {
             </button>
           )}
 
-          {(isFarmer || isBuyer) && ['funded', 'shipped'].includes(order.status) && (
+          {isBuyer && ['funded', 'shipped'].includes(order.status) && (
             <button
               onClick={handleDispute}
               className="w-full border border-red-500 text-red-600 hover:bg-red-50 py-2.5 rounded-xl font-semibold"
@@ -134,8 +149,30 @@ export default function OrderPage() {
               Raise Dispute
             </button>
           )}
+
+          {(isBuyer || isFarmer) && order.status === 'completed' && (
+            <button
+              onClick={() => setShowReceipt(true)}
+              className="w-full border border-green-600 text-green-700 hover:bg-green-50 py-2.5 rounded-xl font-semibold text-sm"
+            >
+              View Receipt
+            </button>
+          )}
+
+          {isBuyer && order.status === 'completed' && order.productId && (
+            <Link
+              to={`/marketplace/${order.productId}`}
+              className="block text-center w-full bg-green-50 hover:bg-green-100 text-green-700 py-2.5 rounded-xl font-semibold text-sm"
+            >
+              Buy Again
+            </Link>
+          )}
         </div>
       </div>
+
+      {showReceipt && (
+        <ReceiptModal orderId={order.id} onClose={() => setShowReceipt(false)} />
+      )}
 
       {toast && <TxStatusToast {...toast} onClose={() => setToast(null)} />}
     </div>

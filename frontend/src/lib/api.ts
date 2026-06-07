@@ -31,7 +31,7 @@ export const updateProduct = (id: string, body: object) =>
 export const delistProduct = (id: string) => api.delete(`/products/${id}`);
 
 // Orders
-export const getOrders = () => api.get('/orders');
+export const getOrders = (params?: object) => api.get('/orders', { params });
 export const getOrder = (id: string) => api.get(`/orders/${id}`);
 export const createOrder = (body: object) => api.post('/orders', body);
 export const fundOrder = (id: string, body: object) =>
@@ -68,3 +68,9 @@ export const revokeAllOtherSessions = () => api.delete('/users/me/sessions');
 
 // Disputes
 export const getDisputes = () => api.get('/disputes');
+
+// Receipts
+export const getReceipt = (orderId: string) => api.get(`/receipts/${orderId}`);
+
+// Cancel order (buyer, created status only)
+export const cancelOrder = (id: string) => api.delete(`/orders/${id}`);
