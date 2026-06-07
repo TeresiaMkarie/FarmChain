@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useWalletStore } from '../store/walletStore';
 import { useOrders } from '../hooks/useOrders';
+import { exportOrders } from '../lib/api';
 import StatusBadge from '../components/shared/StatusBadge';
 import { shortAddress, stroopsToXlm } from '../lib/stellar';
 
@@ -25,12 +26,25 @@ export default function BuyerDashboard() {
             {shortAddress(publicKey ?? '')}
           </p>
         </div>
-        <Link
-          to="/marketplace"
-          className="bg-green-700 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold"
-        >
-          Browse Marketplace
-        </Link>
+        <div className="flex gap-2">
+          <button
+            onClick={() => exportOrders().then((r) => {
+              const url = URL.createObjectURL(r.data);
+              const a = document.createElement('a');
+              a.href = url; a.download = 'my-orders.csv'; a.click();
+              URL.revokeObjectURL(url);
+            })}
+            className="border border-green-600 text-green-700 hover:bg-green-50 px-4 py-2 rounded-xl text-sm font-medium"
+          >
+            Export CSV
+          </button>
+          <Link
+            to="/marketplace"
+            className="bg-green-700 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold"
+          >
+            Browse Marketplace
+          </Link>
+        </div>
       </div>
 
       {/* Stats */}
