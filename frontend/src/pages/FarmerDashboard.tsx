@@ -31,6 +31,10 @@ export default function FarmerDashboard() {
   const [confirmDelistId, setConfirmDelistId] = useState<string | null>(null);
   const [toast, setToast] = useState<Toast | null>(null);
 
+  const PAGE = 10;
+  const [productPage, setProductPage] = useState(1);
+  const [orderPage, setOrderPage] = useState(1);
+
   // ── Financial summary ────────────────────────────────────────────────────
   const completedEarnings = orders
     .filter((o) => o.status === 'completed')
@@ -110,6 +114,12 @@ export default function FarmerDashboard() {
   };
 
   const btnSm = 'px-2.5 py-1 rounded-lg text-xs font-medium transition';
+
+  const pagedProducts = products.slice((productPage - 1) * PAGE, productPage * PAGE);
+  const productPages = Math.ceil(products.length / PAGE);
+
+  const pagedOrders = orders.slice((orderPage - 1) * PAGE, orderPage * PAGE);
+  const orderPages = Math.ceil(orders.length / PAGE);
 
   return (
     <div className="max-w-5xl mx-auto px-6 py-10">
@@ -222,7 +232,16 @@ export default function FarmerDashboard() {
 
       {/* ── My Listings ── */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">My Listings</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-700">
+            My Listings
+            {products.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-gray-400">
+                ({products.length} total)
+              </span>
+            )}
+          </h2>
+        </div>
         {pLoading ? (
           <p className="text-gray-400">Loading…</p>
         ) : (
@@ -236,7 +255,7 @@ export default function FarmerDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {products.map((p) => {
+                {pagedProducts.map((p) => {
                   const lowStock = p.status === 'active' && p.quantity > 0 && p.quantity <= 10;
                   return (
                     <tr key={p.id} className="border-t border-gray-100 hover:bg-gray-50">
@@ -309,7 +328,7 @@ export default function FarmerDashboard() {
                     </tr>
                   );
                 })}
-                {products.length === 0 && (
+                {pagedProducts.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                       No products listed yet.{' '}
@@ -321,13 +340,44 @@ export default function FarmerDashboard() {
                 )}
               </tbody>
             </table>
+
+            {productPages > 1 && (
+              <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
+                <span>Page {productPage} of {productPages}</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setProductPage((p) => Math.max(1, p - 1))}
+                    disabled={productPage === 1}
+                    className="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    onClick={() => setProductPage((p) => Math.min(productPages, p + 1))}
+                    disabled={productPage === productPages}
+                    className="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
 
       {/* ── Incoming Orders ── */}
       <section className="mb-8">
-        <h2 className="text-xl font-semibold text-gray-700 mb-4">Incoming Orders</h2>
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold text-gray-700">
+            Incoming Orders
+            {orders.length > 0 && (
+              <span className="ml-2 text-sm font-normal text-gray-400">
+                ({orders.length} total)
+              </span>
+            )}
+          </h2>
+        </div>
         {oLoading ? (
           <p className="text-gray-400">Loading…</p>
         ) : (
@@ -341,7 +391,7 @@ export default function FarmerDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((o) => (
+                {pagedOrders.map((o) => (
                   <tr key={o.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-xs">{o.id.slice(0, 8)}…</td>
                     <td className="px-4 py-3 text-gray-700">{o.productName ?? '—'}</td>
@@ -376,7 +426,7 @@ export default function FarmerDashboard() {
                     </td>
                   </tr>
                 ))}
-                {orders.length === 0 && (
+                {pagedOrders.length === 0 && (
                   <tr>
                     <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
                       No orders yet.
@@ -385,6 +435,28 @@ export default function FarmerDashboard() {
                 )}
               </tbody>
             </table>
+
+            {orderPages > 1 && (
+              <div className="flex items-center justify-between mt-3 text-sm text-gray-500">
+                <span>Page {orderPage} of {orderPages}</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => setOrderPage((p) => Math.max(1, p - 1))}
+                    disabled={orderPage === 1}
+                    className="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+                  >
+                    ← Prev
+                  </button>
+                  <button
+                    onClick={() => setOrderPage((p) => Math.min(orderPages, p + 1))}
+                    disabled={orderPage === orderPages}
+                    className="px-3 py-1 rounded-lg border border-gray-200 hover:bg-gray-50 disabled:opacity-40"
+                  >
+                    Next →
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </section>
