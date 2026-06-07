@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { getProducts, getProduct } from '../lib/api';
 import { parseError } from '../lib/errors';
 import type { Product } from '../types';
@@ -30,18 +30,20 @@ export function useProducts(params?: Record<string, string>) {
 
   const paramsKey = params ? JSON.stringify(params) : '';
 
-  const fetch = () => {
+  const refresh = useCallback(() => {
+    let cancelled = false;
     setLoading(true);
     setError(null);
     getProducts(params)
-      .then((res) => setProducts((res.data.products ?? []).map(toProduct)))
-      .catch((err) => setError(parseError(err)))
-      .finally(() => setLoading(false));
-  };
+      .then((res) => { if (!cancelled) setProducts((res.data.products ?? []).map(toProduct)); })
+      .catch((err) => { if (!cancelled) setError(parseError(err)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, [paramsKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(fetch, [paramsKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => refresh(), [refresh]);
 
-  return { products, loading, error, setProducts, refresh: fetch };
+  return { products, loading, error, setProducts, refresh };
 }
 
 export function useProduct(id: string) {
@@ -51,12 +53,14 @@ export function useProduct(id: string) {
 
   useEffect(() => {
     if (!id) return;
+    let cancelled = false;
     setLoading(true);
     setError(null);
     getProduct(id)
-      .then((res) => setProduct(toProduct(res.data.product)))
-      .catch((err) => setError(parseError(err)))
-      .finally(() => setLoading(false));
+      .then((res) => { if (!cancelled) setProduct(toProduct(res.data.product)); })
+      .catch((err) => { if (!cancelled) setError(parseError(err)); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, [id]);
 
   return { product, loading, error };
