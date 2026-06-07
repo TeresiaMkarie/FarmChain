@@ -54,8 +54,38 @@ export default function BuyerDashboard() {
         {loading && <p className="text-gray-400">Loading…</p>}
         {error && <p className="text-red-500 text-sm">{error}</p>}
 
-        {!loading && (
-          <div className="overflow-x-auto">
+        {!loading && myOrders.length === 0 && (
+          <p className="text-gray-400 text-center py-12">
+            No orders yet.{' '}
+            <Link to="/marketplace" className="text-green-700 underline">Browse the marketplace</Link>{' '}
+            to get started.
+          </p>
+        )}
+
+        {/* Mobile cards */}
+        {!loading && myOrders.length > 0 && (
+          <div className="sm:hidden space-y-3">
+            {myOrders.map((o) => (
+              <div key={o.id} className="bg-white rounded-xl shadow p-4 space-y-2">
+                <div className="flex justify-between items-start">
+                  <p className="font-medium text-gray-800 text-sm">{o.product?.name ?? `#${o.productId?.slice(0,8)}`}</p>
+                  <StatusBadge status={o.status} />
+                </div>
+                <div className="flex justify-between text-xs text-gray-500">
+                  <span className="font-mono">{o.id.slice(0, 8)}…</span>
+                  <span className="font-semibold text-green-700">{stroopsToXlm(o.amount).toFixed(2)} XLM</span>
+                </div>
+                <Link to={`/orders/${o.id}`} className="block text-center text-xs text-green-700 font-medium border border-green-200 rounded-lg py-1.5 hover:bg-green-50">
+                  View Order
+                </Link>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Desktop table */}
+        {!loading && myOrders.length > 0 && (
+          <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm bg-white rounded-xl shadow overflow-hidden">
               <thead className="bg-green-50 text-gray-600">
                 <tr>
@@ -68,32 +98,16 @@ export default function BuyerDashboard() {
                 {myOrders.map((o) => (
                   <tr key={o.id} className="border-t border-gray-100 hover:bg-gray-50">
                     <td className="px-4 py-3 font-mono text-xs">{o.id.slice(0, 8)}…</td>
-                    <td className="px-4 py-3 text-gray-700">
-                      {o.product?.name ?? `#${o.productId}`}
-                    </td>
+                    <td className="px-4 py-3 text-gray-700">{o.product?.name ?? `#${o.productId}`}</td>
                     <td className="px-4 py-3">{stroopsToXlm(o.amount).toFixed(2)}</td>
                     <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                     <td className="px-4 py-3">
-                      <Link
-                        to={`/orders/${o.id}`}
-                        className="text-green-700 hover:underline text-xs font-medium"
-                      >
+                      <Link to={`/orders/${o.id}`} className="text-green-700 hover:underline text-xs font-medium">
                         View
                       </Link>
                     </td>
                   </tr>
                 ))}
-                {myOrders.length === 0 && (
-                  <tr>
-                    <td colSpan={5} className="px-4 py-12 text-center text-gray-400">
-                      No orders yet.{' '}
-                      <Link to="/marketplace" className="text-green-700 underline">
-                        Browse the marketplace
-                      </Link>{' '}
-                      to get started.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
           </div>
