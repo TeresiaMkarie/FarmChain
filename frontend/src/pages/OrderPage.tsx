@@ -10,6 +10,7 @@ import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
 import OrderTimeline from '../components/shared/OrderTimeline';
 import ReceiptModal from '../components/shared/ReceiptModal';
+import MessageThread from '../components/shared/MessageThread';
 import { parseError } from '../lib/errors';
 
 export default function OrderPage() {
@@ -246,6 +247,10 @@ export default function OrderPage() {
       )}
       {isBuyer && order.status === 'completed' && reviewSubmitted && (
         <p className="text-center text-sm text-gray-400 mt-4">You reviewed this order.</p>
+      )}
+
+      {(isBuyer || isFarmer) && publicKey && (
+        <MessageThread orderId={order.id} myPublicKey={publicKey} />
       )}
 
       {showReceipt && (
