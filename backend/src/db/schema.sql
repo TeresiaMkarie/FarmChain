@@ -40,7 +40,7 @@ CREATE TABLE IF NOT EXISTS orders (
   amount            BIGINT NOT NULL,  -- stroops
   delivery_address  TEXT,
   status            TEXT NOT NULL DEFAULT 'created'
-                      CHECK (status IN ('created','funded','shipped','completed','disputed','refunded','resolved')),
+                      CHECK (status IN ('created','funded','shipped','completed','disputed','refunded','resolved','cancelled')),
   tracking_hash     TEXT,
   tracking_info     TEXT,
   tx_hash           TEXT,

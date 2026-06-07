@@ -26,10 +26,25 @@ export async function getFreighterPublicKey(): Promise<string | null> {
 }
 
 export async function signTx(xdr: string): Promise<string> {
-  const result = await signTransaction(xdr, {
-    networkPassphrase: NETWORK,
-  });
-  if (result.error) throw new Error(result.error);
+  let result: Awaited<ReturnType<typeof signTransaction>>;
+  try {
+    result = await signTransaction(xdr, { networkPassphrase: NETWORK });
+  } catch (err: any) {
+    // Chrome extension runtime throws non-Error objects when its message channel closes
+    const raw: string = err?.message ?? String(err);
+    if (/message channel closed|listener indicated an asynchronous/i.test(raw)) {
+      throw new Error('Freighter closed before signing. Please try again and keep the popup open.');
+    }
+    throw err;
+  }
+
+  if (result.error) {
+    const msg = String(result.error);
+    if (/user.*(declined|rejected|cancel)|cancel/i.test(msg)) {
+      throw new Error('Transaction cancelled.');
+    }
+    throw new Error(`Freighter: ${msg}`);
+  }
   return result.signedTxXdr;
 }
 

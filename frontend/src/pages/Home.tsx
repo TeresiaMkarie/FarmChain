@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom';
 import { useWalletStore } from '../store/walletStore';
-import HeroIllustration from '../components/shared/HeroIllustration';
 
 const steps = [
   {
@@ -88,9 +87,7 @@ export default function Home() {
 
           {/* Left — text */}
           <div className="flex flex-col gap-7">
-            <span className="self-start bg-green-600/50 border border-green-400/40 text-green-100 text-sm font-medium px-4 py-1.5 rounded-full">
-              Built on Stellar · Powered by Soroban
-            </span>
+            
 
             <h1 className="text-5xl sm:text-6xl font-extrabold leading-tight">
               Farm to Buyer,<br />
@@ -125,7 +122,12 @@ export default function Home() {
 
           {/* Right — illustration */}
           <div className="hidden lg:flex items-center justify-center">
-            <HeroIllustration />
+            <img
+              src="/Farmchain.jpeg"
+              alt="Farm illustration"
+              //className="w-full h-auto max-w-2xl drop-shadow-2xl rounded-2xl"
+              className="w-full h-full object-cover max-w-2xl drop-shadow-2xl rounded-2xl"
+            />
           </div>
 
         </div>
@@ -283,3 +285,4 @@ export default function Home() {
     </div>
   );
 }
+

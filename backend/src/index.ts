@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth';
@@ -6,6 +7,7 @@ import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
 import userRoutes from './routes/users';
 import disputeRoutes from './routes/disputes';
+import receiptRoutes from './routes/receipts';
 
 const app = express();
 const PORT = process.env.PORT ?? 4000;
@@ -28,12 +30,14 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
 app.use(express.json());
+app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
 app.use('/auth', authRoutes);
 app.use('/products', productRoutes);
 app.use('/orders', orderRoutes);
 app.use('/users', userRoutes);
 app.use('/disputes', disputeRoutes);
+app.use('/receipts', receiptRoutes);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 

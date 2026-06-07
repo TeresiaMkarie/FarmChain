@@ -31,7 +31,7 @@ export const updateProduct = (id: string, body: object) =>
 export const delistProduct = (id: string) => api.delete(`/products/${id}`);
 
 // Orders
-export const getOrders = () => api.get('/orders');
+export const getOrders = (params?: object) => api.get('/orders', { params });
 export const getOrder = (id: string) => api.get(`/orders/${id}`);
 export const createOrder = (body: object) => api.post('/orders', body);
 export const fundOrder = (id: string, body: object) =>
@@ -49,8 +49,28 @@ export const resolveOrder = (id: string, body: object) =>
 export const getUser = (publicKey: string) => api.get(`/users/${publicKey}`);
 export const verifyChain = () => api.patch('/users/verify-chain');
 export const updateMe = (body: object) => api.patch('/users/me', body);
+export const uploadAvatar = (file: File) => {
+  const form = new FormData();
+  form.append('avatar', file);
+  return api.post('/users/me/avatar', form);
+};
 export const getUserHistory = (publicKey: string) =>
   api.get(`/users/${publicKey}/history`);
 
+// Notifications
+export const getMyNotifications = () => api.get('/users/me/notifications');
+export const updateMyNotifications = (body: object) => api.put('/users/me/notifications', body);
+
+// Sessions
+export const getMySessions = () => api.get('/users/me/sessions');
+export const revokeSession = (id: string) => api.delete(`/users/me/sessions/${id}`);
+export const revokeAllOtherSessions = () => api.delete('/users/me/sessions');
+
 // Disputes
 export const getDisputes = () => api.get('/disputes');
+
+// Receipts
+export const getReceipt = (orderId: string) => api.get(`/receipts/${orderId}`);
+
+// Cancel order (buyer, created status only)
+export const cancelOrder = (id: string) => api.delete(`/orders/${id}`);

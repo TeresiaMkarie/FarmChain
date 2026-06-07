@@ -30,10 +30,20 @@ export type OrderStatus =
   | 'created'
   | 'funded'
   | 'shipped'
-  | 'delivered'
   | 'completed'
   | 'disputed'
-  | 'refunded';
+  | 'refunded'
+  | 'resolved'
+  | 'cancelled';
+
+export interface OrderDispute {
+  id: string;
+  raisedBy: string;
+  reason: string | null;
+  status: 'open' | 'resolved';
+  resolution: string | null;
+  createdAt: string;
+}
 
 export interface Order {
   id: string;
@@ -43,6 +53,8 @@ export interface Order {
   farmerPk: string;
   buyerPk: string;
   amount: number;
+  quantity?: number;
+  deliveryAddress?: string;
   status: OrderStatus;
   trackingHash?: string;
   trackingInfo?: string;
@@ -51,6 +63,22 @@ export interface Order {
   updatedAt: string;
   product?: Product;
   productName?: string;
+  imageCids?: string[];
+  dispute?: OrderDispute | null;
+}
+
+export interface Receipt {
+  id: string;
+  orderId: string;
+  txHash: string | null;
+  createdAt: string;
+  buyerPk: string;
+  farmerPk: string;
+  amount: number;
+  quantity: number;
+  productName: string | null;
+  unit: string | null;
+  category: string | null;
 }
 
 export interface Dispute {
@@ -78,4 +106,25 @@ export interface ApiUser {
   kycStatus: 'pending' | 'verified' | 'rejected';
   chainVerified: boolean;
   createdAt: string;
+}
+
+export interface UserProfile {
+  public_key: string;
+  role: string;
+  name: string;
+  phone: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  location: string | null;
+  country: string | null;
+  county: string | null;
+  city: string | null;
+  address_line: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  payout_wallet: string | null;
+  preferred_currency: string;
+  preferred_language: string;
+  kyc_status: string;
+  chain_verified: boolean;
 }

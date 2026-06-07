@@ -1,13 +1,26 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useProduct } from '../hooks/useProducts';
 import { useWalletStore } from '../store/walletStore';
-import { createOrder as createOrderApi, fundOrder } from '../lib/api';
+import { useBalance } from '../hooks/useBalance';
+import { createOrder as createOrderApi, fundOrder, cancelOrder, getUser } from '../lib/api';
 import { createOrder as createOrderChain } from '../lib/soroban';
 import { stroopsToXlm } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
 import { parseError } from '../lib/errors';
+
+function buildAddressFromProfile(u: {
+  address_line?: string | null;
+  city?: string | null;
+  county?: string | null;
+  country?: string | null;
+  location?: string | null;
+}): string {
+  const parts = [u.address_line, u.city, u.county, u.country].filter(Boolean);
+  if (parts.length) return parts.join(', ');
+  return u.location ?? '';
+}
 
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
@@ -16,8 +29,23 @@ export default function ProductDetail() {
   const navigate = useNavigate();
 
   const [quantity, setQuantity] = useState(1);
+  const [deliveryAddress, setDeliveryAddress] = useState('');
+  const [addressLoaded, setAddressLoaded] = useState(false);
   const [toast, setToast] = useState<{ status: 'pending' | 'success' | 'error'; message?: string } | null>(null);
   const [buying, setBuying] = useState(false);
+
+  const { xlm: balanceXlm } = useBalance(publicKey ?? '');
+
+  useEffect(() => {
+    if (!publicKey || addressLoaded) return;
+    getUser(publicKey)
+      .then((res) => {
+        const saved = buildAddressFromProfile(res.data.user ?? {});
+        if (saved) setDeliveryAddress(saved);
+      })
+      .catch(() => {})
+      .finally(() => setAddressLoaded(true));
+  }, [publicKey, addressLoaded]);
 
   const handleBuy = async () => {
     if (!publicKey) {
@@ -28,28 +56,48 @@ export default function ProductDetail() {
     setBuying(true);
     setToast({ status: 'pending', message: 'Creating order…' });
 
+    let orderId: string | null = null;
+
     try {
       // 1. Create order record in DB
-      const orderRes = await createOrderApi({ productId: product.id, quantity });
-      const { orderId } = orderRes.data;
+      let orderRes;
+      try {
+        orderRes = await createOrderApi({ productId: product.id, quantity, deliveryAddress });
+      } catch (err: unknown) {
+        const status = (err as { response?: { status?: number; data?: { available?: number } } })?.response?.status;
+        if (status === 409) {
+          const available = (err as { response: { data?: { available?: number } } }).response.data?.available ?? 1;
+          setQuantity(Math.min(quantity, available));
+          throw new Error(`Only ${available} ${product.unit} available now. Quantity adjusted.`, { cause: err });
+        }
+        throw err;
+      }
+      orderId = orderRes.data.orderId;
 
-      // 2. Use a timestamp as a unique on-chain order ID (fits u64)
-      const onChainOrderId = Date.now();
+      // 2. Random u64-safe order ID — avoids timestamp collisions
+      const onChainOrderId = Math.floor(Math.random() * Number.MAX_SAFE_INTEGER);
       const amountStroops = BigInt(product.priceXlm) * BigInt(quantity);
 
-      setToast({ status: 'pending', message: 'Signing escrow transaction…' });
+      setToast({ status: 'pending', message: 'Waiting for Freighter signature…' });
 
-      // 3. Lock funds in the escrow contract
-      const { txHash } = await createOrderChain(
-        publicKey,
-        onChainOrderId,
-        product.onChainId ?? 0,
-        product.farmerPk,
-        amountStroops,
-      );
+      // 3. Lock funds in escrow — if this fails, roll back the DB order
+      let txHash: string;
+      try {
+        ({ txHash } = await createOrderChain(
+          publicKey,
+          onChainOrderId,
+          product.onChainId ?? 0,
+          product.farmerPk,
+          amountStroops,
+        ));
+      } catch (escrowErr) {
+        // Roll back the pending DB order so stock is restored
+        await cancelOrder(orderId!).catch(() => {});
+        throw escrowErr;
+      }
 
-      // 4. Mark order as funded in DB with on-chain details
-      await fundOrder(orderId, {
+      // 4. Mark order as funded
+      await fundOrder(orderId!, {
         onChainOrderId,
         txHash,
         escrowId: import.meta.env.VITE_ESCROW_CONTRACT_ID,
@@ -57,7 +105,7 @@ export default function ProductDetail() {
 
       setToast({ status: 'success', message: 'Order placed! Funds locked in escrow.' });
       setTimeout(() => navigate(`/orders/${orderId}`), 1500);
-    } catch (err: any) {
+    } catch (err: unknown) {
       setToast({ status: 'error', message: parseError(err) });
       setBuying(false);
     }
@@ -73,6 +121,8 @@ export default function ProductDetail() {
 
   const totalXlm = stroopsToXlm(Number(BigInt(product.priceXlm) * BigInt(quantity))).toFixed(2);
   const isBuyer = publicKey && publicKey !== product.farmerPk;
+  const insufficientBalance =
+    balanceXlm !== null && parseFloat(totalXlm) > parseFloat(balanceXlm) - 1;
 
   return (
     <div className="max-w-3xl mx-auto px-6 py-10">
@@ -112,7 +162,12 @@ export default function ProductDetail() {
           {product.farmerName && (
             <div>
               <p className="text-gray-500">Farmer</p>
-              <p>{product.farmerName}</p>
+              <Link
+                to={`/farmers/${product.farmerPk}`}
+                className="text-green-700 hover:underline font-medium"
+              >
+                {product.farmerName}
+              </Link>
             </div>
           )}
           {product.location && (
@@ -148,9 +203,50 @@ export default function ProductDetail() {
                 <strong className="text-green-700">{totalXlm} XLM</strong>
               </span>
             </div>
+
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-gray-700">
+                  Delivery / pick-up address
+                </label>
+                {deliveryAddress && (
+                  <button
+                    type="button"
+                    onClick={() => setDeliveryAddress('')}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Clear
+                  </button>
+                )}
+              </div>
+              <textarea
+                rows={2}
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                placeholder="Enter your delivery or pick-up address…"
+                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 resize-none"
+              />
+              {!deliveryAddress.trim() && (
+                <p className="text-xs text-amber-600">
+                  Address is required.{' '}
+                  <Link to="/settings" className="underline">
+                    Save one in your profile
+                  </Link>{' '}
+                  to auto-fill next time.
+                </p>
+              )}
+            </div>
+
+            {insufficientBalance && (
+              <p className="text-xs text-red-600 bg-red-50 rounded-lg px-3 py-2">
+                Insufficient balance. You have {balanceXlm} XLM but need at least{' '}
+                {(parseFloat(totalXlm) + 1).toFixed(2)} XLM (including fees).
+              </p>
+            )}
+
             <button
               onClick={handleBuy}
-              disabled={buying}
+              disabled={buying || !deliveryAddress.trim() || insufficientBalance}
               className="w-full bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition"
             >
               {buying ? 'Processing…' : `Buy for ${totalXlm} XLM`}
