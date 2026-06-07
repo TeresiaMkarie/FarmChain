@@ -59,3 +59,15 @@ export function stroopsToXlm(stroops: number): number {
 export function xlmToStroops(xlm: number): number {
   return Math.round(xlm * 10_000_000);
 }
+
+const EXPLORER_BASE = import.meta.env.VITE_STELLAR_NETWORK === 'mainnet'
+  ? 'https://stellar.expert/explorer/public'
+  : 'https://stellar.expert/explorer/testnet';
+
+export function explorerTxUrl(txHash: string): string {
+  return `${EXPLORER_BASE}/tx/${txHash}`;
+}
+
+export function explorerAccountUrl(address: string): string {
+  return `${EXPLORER_BASE}/account/${address}`;
+}

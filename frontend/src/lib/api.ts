@@ -74,3 +74,22 @@ export const getReceipt = (orderId: string) => api.get(`/receipts/${orderId}`);
 
 // Cancel order (buyer, created status only)
 export const cancelOrder = (id: string) => api.delete(`/orders/${id}`);
+
+// F3: Export orders as CSV
+export const exportOrders = () => api.get('/orders/export', { responseType: 'blob' });
+
+// F1: Notifications
+export const getNotifications = () => api.get('/notifications');
+export const getUnreadCount = () => api.get('/notifications/unread-count');
+export const markAllRead = () => api.patch('/notifications/read-all');
+
+// F2: Reviews
+export const getReviews = (productId: string) => api.get('/reviews', { params: { productId } });
+export const submitReview = (body: object) => api.post('/reviews', body);
+
+// Admin
+export const getAdminStats = () => api.get('/admin/stats');
+export const getAdminDisputes = (params?: object) => api.get('/admin/disputes', { params });
+export const getAdminUsers = (params?: object) => api.get('/admin/users', { params });
+export const suspendUser = (pk: string, body: object) => api.patch(`/admin/users/${pk}/suspend`, body);
+export const verifyUser = (pk: string) => api.patch(`/admin/users/${pk}/verify`);
