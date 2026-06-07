@@ -79,6 +79,41 @@ CREATE TABLE IF NOT EXISTS user_sessions (
 CREATE INDEX IF NOT EXISTS idx_sessions_public_key ON user_sessions(public_key);
 CREATE INDEX IF NOT EXISTS idx_sessions_token_hash ON user_sessions(token_hash);
 
+-- F7: Farmer bio and farm images
+ALTER TABLE users ADD COLUMN IF NOT EXISTS bio         TEXT;
+ALTER TABLE users ADD COLUMN IF NOT EXISTS farm_images TEXT[];
+
+-- F4: Delivery date scheduling on orders
+ALTER TABLE orders ADD COLUMN IF NOT EXISTS delivery_date DATE;
+
+-- F5: Harvest date and freshness on products
+ALTER TABLE products ADD COLUMN IF NOT EXISTS harvested_at     DATE;
+ALTER TABLE products ADD COLUMN IF NOT EXISTS best_before_days INT;
+
+-- F1: Notifications table
+CREATE TABLE IF NOT EXISTS notifications (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_pk    TEXT NOT NULL REFERENCES users(public_key) ON DELETE CASCADE,
+  type       TEXT NOT NULL,
+  payload    JSONB NOT NULL DEFAULT '{}',
+  read       BOOLEAN NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_pk ON notifications(user_pk);
+CREATE INDEX IF NOT EXISTS idx_notifications_unread  ON notifications(user_pk, read) WHERE read = FALSE;
+
+-- F2: Reviews table
+CREATE TABLE IF NOT EXISTS reviews (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id   UUID NOT NULL REFERENCES orders(id),
+  product_id UUID NOT NULL REFERENCES products(id),
+  buyer_pk   TEXT NOT NULL REFERENCES users(public_key),
+  rating     SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  comment    TEXT CHECK (char_length(comment) <= 1000),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_reviews_order ON reviews(order_id);
+
 -- P1: Indexes on high-query columns to avoid full table scans on dashboard loads
 CREATE INDEX IF NOT EXISTS idx_orders_farmer_pk  ON orders(farmer_pk);
 CREATE INDEX IF NOT EXISTS idx_orders_buyer_pk   ON orders(buyer_pk);
