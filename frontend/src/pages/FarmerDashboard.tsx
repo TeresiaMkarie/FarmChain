@@ -8,6 +8,7 @@ import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
 import ShipOrderModal from '../components/farmer/ShipOrderModal';
 import EditProductModal, { type RawProductUpdate } from '../components/farmer/EditProductModal';
+import DelistConfirmModal from '../components/shared/DelistConfirmModal';
 import { shortAddress, stroopsToXlm } from '../lib/stellar';
 import { delistProduct as delistProductApi, activateProduct } from '../lib/api';
 import { listProduct, delistProduct as delistProductChain } from '../lib/soroban';
@@ -311,29 +312,12 @@ export default function FarmerDashboard() {
                             </button>
                           )}
                           {(p.status === 'active' || p.status === 'pending') && (
-                            confirmDelistId === String(p.id) ? (
-                              <>
-                                <button
-                                  onClick={() => handleDelist(p)}
-                                  className={`${btnSm} bg-red-600 hover:bg-red-700 text-white`}
-                                >
-                                  Confirm
-                                </button>
-                                <button
-                                  onClick={() => setConfirmDelistId(null)}
-                                  className={`${btnSm} bg-gray-100 hover:bg-gray-200 text-gray-600`}
-                                >
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => setConfirmDelistId(String(p.id))}
-                                className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
-                              >
-                                Delist
-                              </button>
-                            )
+                            <button
+                              onClick={() => setConfirmDelistId(String(p.id))}
+                              className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
+                            >
+                              Delist
+                            </button>
                           )}
                           {(p.status === 'sold' || p.status === 'cancelled') && (
                             <Link
@@ -572,6 +556,18 @@ export default function FarmerDashboard() {
           onUpdated={handleProductUpdated}
         />
       )}
+      {confirmDelistId && (() => {
+        const p = products.find((x) => String(x.id) === confirmDelistId);
+        if (!p) return null;
+        return (
+          <DelistConfirmModal
+            productName={p.name}
+            isActive={p.status === 'active'}
+            onConfirm={() => handleDelist(p)}
+            onCancel={() => setConfirmDelistId(null)}
+          />
+        );
+      })()}
       {toast && <TxStatusToast {...toast} onClose={() => setToast(null)} />}
     </div>
   );
