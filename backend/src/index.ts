@@ -2,6 +2,7 @@ import 'dotenv/config';
 import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import { rateLimit } from 'express-rate-limit';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
@@ -9,13 +10,21 @@ import userRoutes from './routes/users';
 import disputeRoutes from './routes/disputes';
 import receiptRoutes from './routes/receipts';
 
+// S1: Fail fast if JWT secret is missing or too short to be secure
+const JWT_SECRET = process.env.JWT_SECRET ?? '';
+if (JWT_SECRET.length < 32) {
+  console.error('FATAL: JWT_SECRET must be at least 32 characters. Set a strong secret in .env');
+  process.exit(1);
+}
+
 const app = express();
 const PORT = process.env.PORT ?? 4000;
+const IS_PROD = process.env.NODE_ENV === 'production';
 
-const allowedOrigins = [
-  process.env.FRONTEND_URL ?? 'http://localhost:5173',
-  /^http:\/\/localhost:\d+$/,   // any localhost port in dev
-];
+// S3: In production only allow the configured frontend origin; in dev allow any localhost port
+const allowedOrigins: (string | RegExp)[] = IS_PROD
+  ? [process.env.FRONTEND_URL!]
+  : [process.env.FRONTEND_URL ?? 'http://localhost:5173', /^http:\/\/localhost:\d+$/];
 
 app.use(cors({
   origin: (origin, cb) => {
@@ -29,10 +38,20 @@ app.use(cors({
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
 }));
+
+// S4: Rate limit auth endpoints — 20 requests per 15 minutes per IP
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Too many requests, please try again later.' },
+});
+
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
-app.use('/auth', authRoutes);
+app.use('/auth', authLimiter, authRoutes);
 app.use('/products', productRoutes);
 app.use('/orders', orderRoutes);
 app.use('/users', userRoutes);
