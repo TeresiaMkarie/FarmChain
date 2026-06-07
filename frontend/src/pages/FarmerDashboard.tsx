@@ -8,6 +8,7 @@ import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
 import ShipOrderModal from '../components/farmer/ShipOrderModal';
 import EditProductModal, { type RawProductUpdate } from '../components/farmer/EditProductModal';
+import DelistConfirmModal from '../components/shared/DelistConfirmModal';
 import { shortAddress, stroopsToXlm } from '../lib/stellar';
 import { delistProduct as delistProductApi, activateProduct } from '../lib/api';
 import { listProduct, delistProduct as delistProductChain } from '../lib/soroban';
@@ -95,6 +96,17 @@ export default function FarmerDashboard() {
     }
   };
 
+  const handleDeleteDraft = async (product: Product) => {
+    setToast({ status: 'pending', message: `Deleting draft ${product.name}…` });
+    try {
+      await delistProductApi(String(product.id));
+      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+      setToast({ status: 'success', message: `Draft "${product.name}" deleted.` });
+    } catch (err) {
+      setToast({ status: 'error', message: parseError(err) });
+    }
+  };
+
   const handleShipped = () => {
     setShipModal(null);
     refreshOrders();
@@ -113,7 +125,12 @@ export default function FarmerDashboard() {
     setToast({ status: 'success', message: 'Product updated.' });
   };
 
-  const btnSm = 'px-2.5 py-1 rounded-lg text-xs font-medium transition';
+  // Button variants — all share the same size so nothing looks cramped
+  const btn      = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition';
+  const btnPrimary     = `${btn} bg-green-700 hover:bg-green-600 text-white`;
+  const btnSecondary   = `${btn} border border-green-700 text-green-700 hover:bg-green-50`;
+  const btnGhost       = `${btn} border border-gray-300 text-gray-600 hover:bg-gray-50`;
+  const btnDanger      = `${btn} bg-green-900 hover:bg-green-950 text-white`;
 
   const pagedProducts = products.slice((productPage - 1) * PAGE, productPage * PAGE);
   const productPages = Math.ceil(products.length / PAGE);
@@ -184,9 +201,9 @@ export default function FarmerDashboard() {
                 </div>
                 <button
                   onClick={() => setShipModal(o)}
-                  className={`${btnSm} bg-orange-500 hover:bg-orange-400 text-white`}
+                  className={btnPrimary}
                 >
-                  Ship
+                  Ship order
                 </button>
               </div>
             ))}
@@ -199,13 +216,22 @@ export default function FarmerDashboard() {
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5 capitalize">{p.category} · {p.quantity} {p.unit}</p>
                 </div>
-                <button
-                  onClick={() => handleActivate(p)}
-                  disabled={activatingId === String(p.id)}
-                  className={`${btnSm} bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-white`}
-                >
-                  {activatingId === String(p.id) ? 'Activating…' : 'Activate'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleActivate(p)}
+                    disabled={activatingId === String(p.id)}
+                    className={`${btnPrimary} disabled:opacity-50`}
+                  >
+                    {activatingId === String(p.id) ? 'Activating…' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDraft(p)}
+                    disabled={activatingId === String(p.id)}
+                    className={`${btnGhost} disabled:opacity-50`}
+                  >
+                    Delete draft
+                  </button>
+                </div>
               </div>
             ))}
 
@@ -220,9 +246,9 @@ export default function FarmerDashboard() {
                 </div>
                 <Link
                   to={`/orders/${o.id}`}
-                  className={`${btnSm} bg-red-100 hover:bg-red-200 text-red-700`}
+                  className={btnSecondary}
                 >
-                  View
+                  View dispute
                 </Link>
               </div>
             ))}
@@ -272,53 +298,36 @@ export default function FarmerDashboard() {
                       <td className="px-4 py-3">{stroopsToXlm(p.priceXlm).toFixed(2)}</td>
                       <td className="px-4 py-3"><StatusBadge status={p.status} /></td>
                       <td className="px-4 py-3">
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-2">
                           {p.status === 'pending' && (
                             <button
                               onClick={() => handleActivate(p)}
                               disabled={activatingId === String(p.id)}
-                              className={`${btnSm} bg-yellow-100 hover:bg-yellow-200 disabled:opacity-50 text-yellow-800`}
+                              className={`${btnPrimary} disabled:opacity-50`}
                             >
-                              {activatingId === String(p.id) ? '…' : 'Activate'}
+                              {activatingId === String(p.id) ? 'Activating…' : 'Activate'}
                             </button>
                           )}
                           {(p.status === 'active' || p.status === 'pending') && (
                             <button
                               onClick={() => setEditModal(p)}
-                              className={`${btnSm} bg-blue-50 hover:bg-blue-100 text-blue-700`}
+                              className={btnSecondary}
                             >
                               Edit
                             </button>
                           )}
                           {(p.status === 'active' || p.status === 'pending') && (
-                            confirmDelistId === String(p.id) ? (
-                              <>
-                                <button
-                                  onClick={() => handleDelist(p)}
-                                  className={`${btnSm} bg-red-600 hover:bg-red-700 text-white`}
-                                >
-                                  Confirm
-                                </button>
-                                <button
-                                  onClick={() => setConfirmDelistId(null)}
-                                  className={`${btnSm} bg-gray-100 hover:bg-gray-200 text-gray-600`}
-                                >
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => setConfirmDelistId(String(p.id))}
-                                className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
-                              >
-                                Delist
-                              </button>
-                            )
+                            <button
+                              onClick={() => setConfirmDelistId(String(p.id))}
+                              className={btnDanger}
+                            >
+                              Delist
+                            </button>
                           )}
                           {(p.status === 'sold' || p.status === 'cancelled') && (
                             <Link
                               to="/farmer/list-product"
-                              className={`${btnSm} bg-gray-100 hover:bg-gray-200 text-gray-600`}
+                              className={btnSecondary}
                             >
                               Re-list
                             </Link>
@@ -381,7 +390,51 @@ export default function FarmerDashboard() {
         {oLoading ? (
           <p className="text-gray-400">Loading…</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {pagedOrders.length === 0 && (
+            <p className="text-gray-400 text-center py-8">No orders yet.</p>
+          )}
+
+          {/* Mobile cards */}
+          {pagedOrders.length > 0 && (
+            <div className="sm:hidden space-y-3">
+              {pagedOrders.map((o) => (
+                <div key={o.id} className="bg-white rounded-xl shadow p-4 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <p className="font-medium text-gray-800 text-sm">{o.productName ?? '—'}</p>
+                    <StatusBadge status={o.status} />
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span className="font-mono">{shortAddress(o.buyerPk)}</span>
+                    <span className="font-semibold text-green-700">{stroopsToXlm(Number(o.amount)).toFixed(2)} XLM</span>
+                  </div>
+                  {o.status === 'funded' ? (
+                    <button
+                      onClick={() => setShipModal(o)}
+                      className="w-full text-center text-xs bg-green-700 hover:bg-green-600 text-white rounded-xl py-2 font-semibold transition"
+                    >
+                      Ship order
+                    </button>
+                  ) : (
+                    <Link
+                      to={`/orders/${o.id}`}
+                      className={`block text-center text-xs font-semibold rounded-xl py-2 transition ${
+                        o.status === 'disputed'
+                          ? 'border border-green-700 text-green-700 hover:bg-green-50'
+                          : 'border border-gray-300 text-gray-600 hover:bg-gray-50'
+                      }`}
+                    >
+                      {o.status === 'disputed' ? 'View dispute' : 'View order'}
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Desktop table */}
+          {pagedOrders.length > 0 && (
+            <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm bg-white rounded-xl shadow overflow-hidden">
               <thead className="bg-green-50 text-gray-600">
                 <tr>
@@ -402,37 +455,30 @@ export default function FarmerDashboard() {
                       {o.status === 'funded' && (
                         <button
                           onClick={() => setShipModal(o)}
-                          className={`${btnSm} bg-green-100 hover:bg-green-200 text-green-700`}
+                          className={btnPrimary}
                         >
-                          Ship
+                          Ship order
                         </button>
                       )}
                       {o.status === 'disputed' && (
                         <Link
                           to={`/orders/${o.id}`}
-                          className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
+                          className={btnSecondary}
                         >
-                          Dispute
+                          View dispute
                         </Link>
                       )}
                       {!['funded', 'disputed'].includes(o.status) && (
                         <Link
                           to={`/orders/${o.id}`}
-                          className={`${btnSm} bg-gray-100 hover:bg-gray-200 text-gray-600`}
+                          className={btnGhost}
                         >
-                          View
+                          View order
                         </Link>
                       )}
                     </td>
                   </tr>
                 ))}
-                {pagedOrders.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                      No orders yet.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
 
@@ -458,6 +504,8 @@ export default function FarmerDashboard() {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </section>
 
@@ -495,9 +543,9 @@ export default function FarmerDashboard() {
                       <td className="px-4 py-3">
                         <Link
                           to={`/orders/${d.orderId}`}
-                          className={`${btnSm} bg-red-50 hover:bg-red-100 text-red-600`}
+                          className={btnSecondary}
                         >
-                          View
+                          View dispute
                         </Link>
                       </td>
                     </tr>
@@ -523,6 +571,18 @@ export default function FarmerDashboard() {
           onUpdated={handleProductUpdated}
         />
       )}
+      {confirmDelistId && (() => {
+        const p = products.find((x) => String(x.id) === confirmDelistId);
+        if (!p) return null;
+        return (
+          <DelistConfirmModal
+            productName={p.name}
+            isActive={p.status === 'active'}
+            onConfirm={() => handleDelist(p)}
+            onCancel={() => setConfirmDelistId(null)}
+          />
+        );
+      })()}
       {toast && <TxStatusToast {...toast} onClose={() => setToast(null)} />}
     </div>
   );

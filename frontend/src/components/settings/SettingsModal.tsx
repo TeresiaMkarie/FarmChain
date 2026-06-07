@@ -62,13 +62,18 @@ export default function SettingsModal({ publicKey, onClose }: Props) {
           flex flex-col overflow-hidden h-[95dvh] sm:max-h-[88vh]"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 shrink-0 bg-white">
-          <h1 className="text-base font-semibold text-gray-900">Settings</h1>
+        {/* Header — brand green matching navbar */}
+        <div className="flex items-center justify-between px-5 py-4 shrink-0 bg-green-950">
+          <div className="flex items-center gap-2.5">
+            <div className="w-6 h-6 rounded-md bg-green-500 flex items-center justify-center text-xs">
+              🌾
+            </div>
+            <h1 className="text-sm font-semibold text-white tracking-wide">Settings</h1>
+          </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 flex items-center justify-center rounded-lg text-gray-400
-              hover:text-gray-700 hover:bg-gray-100 transition-colors text-sm"
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-green-300
+              hover:text-white hover:bg-white/10 transition-colors text-sm"
             aria-label="Close settings"
           >
             ✕
@@ -78,18 +83,18 @@ export default function SettingsModal({ publicKey, onClose }: Props) {
         {/* Body */}
         <div className="flex flex-1 min-h-0">
           {/* Desktop sidebar */}
-          <aside className="hidden sm:flex flex-col w-44 shrink-0 border-r border-gray-100 py-2 bg-gray-50/60">
+          <aside className="hidden sm:flex flex-col w-48 shrink-0 border-r border-gray-100 py-3 bg-green-950/5 gap-0.5 px-2">
             {TABS.map((tab) => (
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex items-center gap-3 px-4 py-2.5 text-sm font-medium text-left transition-colors
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-left transition-all
                   ${activeTab === tab.key
-                    ? 'bg-green-700 text-white'
-                    : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                    ? 'bg-green-700 text-white shadow-sm'
+                    : 'text-gray-600 hover:bg-green-50 hover:text-green-800'
                   }`}
               >
-                <span>{tab.icon}</span>
+                <span className="text-base leading-none">{tab.icon}</span>
                 {tab.label}
               </button>
             ))}
@@ -101,11 +106,11 @@ export default function SettingsModal({ publicKey, onClose }: Props) {
               <button
                 key={tab.key}
                 onClick={() => setActiveTab(tab.key)}
-                className={`flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] font-medium shrink-0
+                className={`flex flex-col items-center gap-0.5 px-3 py-2 text-[10px] font-semibold shrink-0
                   border-b-2 transition-colors
                   ${activeTab === tab.key
                     ? 'border-green-700 text-green-700'
-                    : 'border-transparent text-gray-500'
+                    : 'border-transparent text-gray-400 hover:text-gray-600'
                   }`}
               >
                 <span className="text-base">{tab.icon}</span>

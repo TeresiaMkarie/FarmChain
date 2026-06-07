@@ -1,23 +1,34 @@
 import { useEffect, useState } from 'react';
+import { useWalletStore } from '../store/walletStore';
 
 const HORIZON_URL =
   import.meta.env.VITE_STELLAR_NETWORK === 'mainnet'
     ? 'https://horizon.stellar.org'
     : 'https://horizon-testnet.stellar.org';
 
+const CACHE_TTL_MS = 30_000;
+
 interface BalanceState {
-  xlm: string | null;   // formatted to 2 dp, e.g. "142.50"
+  xlm: string | null;
   loading: boolean;
   error: string | null;
 }
 
 export function useBalance(publicKey: string): BalanceState {
-  const [state, setState] = useState<BalanceState>({ xlm: null, loading: true, error: null });
+  const { balanceXlm, balanceFetchedAt, setBalance } = useWalletStore();
+  const [state, setState] = useState<BalanceState>({ xlm: balanceXlm, loading: false, error: null });
 
   useEffect(() => {
     if (!publicKey) return;
+
+    // Serve from cache if fresh
+    if (balanceXlm !== null && balanceFetchedAt !== null && Date.now() - balanceFetchedAt < CACHE_TTL_MS) {
+      setState({ xlm: balanceXlm, loading: false, error: null });
+      return;
+    }
+
     let cancelled = false;
-    setState({ xlm: null, loading: true, error: null });
+    setState({ xlm: balanceXlm, loading: true, error: null });
 
     fetch(`${HORIZON_URL}/accounts/${publicKey}`)
       .then((res) => {
@@ -28,8 +39,9 @@ export function useBalance(publicKey: string): BalanceState {
       .then((data) => {
         if (cancelled) return;
         const native = data.balances?.find((b: { asset_type: string }) => b.asset_type === 'native');
-        const raw = parseFloat(native?.balance ?? '0');
-        setState({ xlm: raw.toFixed(2), loading: false, error: null });
+        const formatted = parseFloat(native?.balance ?? '0').toFixed(2);
+        setBalance(formatted);
+        setState({ xlm: formatted, loading: false, error: null });
       })
       .catch((err: Error) => {
         if (cancelled) return;
@@ -38,7 +50,7 @@ export function useBalance(publicKey: string): BalanceState {
       });
 
     return () => { cancelled = true; };
-  }, [publicKey]);
+  }, [publicKey, balanceFetchedAt]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return state;
 }

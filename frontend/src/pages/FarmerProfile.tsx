@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { getUser } from '../lib/api';
+import api from '../lib/api';
 import { useProducts } from '../hooks/useProducts';
 import { shortAddress } from '../lib/stellar';
 import ProductCard from '../components/marketplace/ProductCard';
@@ -8,12 +9,21 @@ import ProductCard from '../components/marketplace/ProductCard';
 interface FarmerUser {
   public_key: string;
   name: string;
+  bio: string | null;
   location: string | null;
   country: string | null;
   city: string | null;
   chain_verified: boolean;
   created_at: string;
   role: string;
+}
+
+interface Review {
+  id: string;
+  rating: number;
+  comment: string | null;
+  buyer_name: string;
+  created_at: string;
 }
 
 export default function FarmerProfile() {
@@ -29,6 +39,22 @@ export default function FarmerProfile() {
     publicKey ? { farmer: publicKey } : undefined,
   );
   const activeProducts = products.filter((p) => p.status === 'active');
+
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [avgRating, setAvgRating] = useState<number | null>(null);
+
+  useEffect(() => {
+    if (!activeProducts.length) return;
+    // Fetch reviews for all active products and aggregate
+    Promise.all(activeProducts.map((p) => api.get('/reviews', { params: { productId: p.id } })))
+      .then((results) => {
+        const all: Review[] = results.flatMap((r) => r.data.reviews);
+        setReviews(all.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()).slice(0, 10));
+        const ratings = results.flatMap((r) => r.data.reviews.map((rv: Review) => rv.rating));
+        if (ratings.length) setAvgRating(parseFloat((ratings.reduce((s: number, v: number) => s + v, 0) / ratings.length).toFixed(1)));
+      })
+      .catch(() => {});
+  }, [activeProducts.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!publicKey) return;
@@ -86,8 +112,23 @@ export default function FarmerProfile() {
           <p className="text-xs text-gray-400 mt-1">
             Member since {new Date(farmer.created_at).toLocaleDateString()}
           </p>
+          {avgRating !== null && (
+            <div className="flex items-center gap-1 mt-2">
+              {[1,2,3,4,5].map((s) => (
+                <span key={s} className={s <= Math.round(avgRating) ? 'text-yellow-400' : 'text-gray-300'}>★</span>
+              ))}
+              <span className="text-xs text-gray-500 ml-1">{avgRating} ({reviews.length} review{reviews.length !== 1 ? 's' : ''})</span>
+            </div>
+          )}
         </div>
       </div>
+
+      {farmer.bio && (
+        <div className="bg-white rounded-2xl shadow p-6 mb-8">
+          <h2 className="text-base font-semibold text-gray-700 mb-2">About this Farmer</h2>
+          <p className="text-sm text-gray-600 leading-relaxed whitespace-pre-wrap">{farmer.bio}</p>
+        </div>
+      )}
 
       {/* Listings */}
       <h2 className="text-xl font-semibold text-gray-700 mb-4">
@@ -104,6 +145,26 @@ export default function FarmerProfile() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
         {activeProducts.map((p) => <ProductCard key={p.id} product={p} />)}
       </div>
+
+      {reviews.length > 0 && (
+        <section className="mt-10">
+          <h2 className="text-xl font-semibold text-gray-700 mb-4">Recent Reviews</h2>
+          <div className="space-y-4">
+            {reviews.map((r) => (
+              <div key={r.id} className="bg-white rounded-xl shadow p-4">
+                <div className="flex items-center gap-2 mb-1">
+                  {[1,2,3,4,5].map((s) => (
+                    <span key={s} className={s <= r.rating ? 'text-yellow-400' : 'text-gray-200'}>★</span>
+                  ))}
+                  <span className="text-xs text-gray-400 ml-auto">{new Date(r.created_at).toLocaleDateString()}</span>
+                </div>
+                {r.comment && <p className="text-sm text-gray-700">{r.comment}</p>}
+                <p className="text-xs text-gray-400 mt-1">— {r.buyer_name}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

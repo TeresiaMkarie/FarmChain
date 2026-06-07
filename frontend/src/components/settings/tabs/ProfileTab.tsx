@@ -65,7 +65,7 @@ export default function ProfileTab({ publicKey, user, onUserUpdate }: Props) {
   return (
     <form onSubmit={handleSave} className="space-y-6">
       <div>
-        <h2 className="text-base font-semibold text-gray-900">Profile Information</h2>
+        <h2 className="text-base font-semibold text-green-800">Profile Information</h2>
         <p className="text-sm text-gray-500 mt-1">Update how you appear across the marketplace.</p>
       </div>
 
@@ -74,7 +74,7 @@ export default function ProfileTab({ publicKey, user, onUserUpdate }: Props) {
         <div className="relative">
           {avatarPreview ? (
             <img src={avatarPreview} alt="avatar"
-              className="w-16 h-16 rounded-full object-cover ring-2 ring-green-100" />
+              className="w-16 h-16 rounded-full object-cover ring-2 ring-green-700" />
           ) : (
             <WalletAvatar publicKey={publicKey} size={64} />
           )}
@@ -89,8 +89,8 @@ export default function ProfileTab({ publicKey, user, onUserUpdate }: Props) {
             type="button"
             onClick={() => fileRef.current?.click()}
             disabled={avatarUploading}
-            className="text-sm font-medium text-green-700 hover:text-green-800
-              transition-colors disabled:opacity-50"
+            className="px-3.5 py-1.5 text-xs font-semibold border border-green-700 text-green-700
+              hover:bg-green-50 rounded-xl transition disabled:opacity-50"
           >
             {avatarUploading ? 'Uploading…' : 'Upload photo'}
           </button>
@@ -116,8 +116,8 @@ export default function ProfileTab({ publicKey, user, onUserUpdate }: Props) {
       {/* Read-only wallet address */}
       <div className="flex flex-col gap-1">
         <label className="text-sm font-medium text-gray-700">Wallet Address</label>
-        <div className="px-3 py-2 rounded-lg border border-gray-200 bg-gray-50
-          text-xs font-mono text-gray-500 break-all select-all">
+        <div className="px-3 py-2 rounded-xl border border-green-100 bg-green-50
+          text-xs font-mono text-green-800 break-all select-all">
           {publicKey}
         </div>
       </div>
@@ -126,8 +126,8 @@ export default function ProfileTab({ publicKey, user, onUserUpdate }: Props) {
 
       <div className="flex items-center gap-3 pt-1">
         <button type="submit" disabled={saving}
-          className="px-5 py-2 bg-green-700 hover:bg-green-800 text-white text-sm
-            font-semibold rounded-xl transition-colors disabled:opacity-50">
+          className="px-5 py-2.5 bg-green-700 hover:bg-green-600 text-white text-sm
+            font-semibold rounded-xl transition disabled:opacity-50">
           {saving ? 'Saving…' : 'Save Changes'}
         </button>
         {saved && <span className="text-sm text-green-700 font-medium">✓ Saved</span>}

@@ -23,7 +23,7 @@ const router = Router();
 // PATCH /users/me  — update own profile
 router.patch('/me', authMiddleware, async (req: AuthRequest, res: Response) => {
   const allowed = [
-    'name', 'phone', 'location', 'email',
+    'name', 'phone', 'location', 'email', 'bio',
     'country', 'county', 'city', 'address_line',
     'latitude', 'longitude',
     'payout_wallet', 'preferred_currency', 'preferred_language',
