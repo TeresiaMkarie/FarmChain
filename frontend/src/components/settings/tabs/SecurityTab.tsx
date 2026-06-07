@@ -74,22 +74,24 @@ export default function SecurityTab({ publicKey }: SecurityTabProps) {
     }
   }
 
+  const btnGhost = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition disabled:opacity-50';
+
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-base font-semibold text-gray-900">Security</h2>
+        <h2 className="text-base font-semibold text-green-800">Security</h2>
         <p className="text-sm text-gray-500 mt-1">Manage active sessions and wallet recovery.</p>
       </div>
 
       {/* Active sessions */}
       <section className="space-y-3">
         <div className="flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Active Sessions</h3>
+          <h3 className="text-xs font-semibold text-green-800 uppercase tracking-wider">Active Sessions</h3>
           {sessions.length > 1 && (
             <button
               onClick={handleRevokeAll}
               disabled={revoking === 'all'}
-              className="text-xs text-red-600 hover:text-red-800 font-medium transition-colors disabled:opacity-50"
+              className="px-3.5 py-1.5 rounded-xl text-xs font-semibold border border-green-900 text-green-900 hover:bg-green-50 transition disabled:opacity-50"
             >
               {revoking === 'all' ? 'Revoking…' : 'Revoke all others'}
             </button>
@@ -114,7 +116,7 @@ export default function SecurityTab({ publicKey }: SecurityTabProps) {
                     </p>
                     {s.current && (
                       <span className="shrink-0 text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded-full font-medium">
-                        current
+                        This device
                       </span>
                     )}
                   </div>
@@ -126,10 +128,9 @@ export default function SecurityTab({ publicKey }: SecurityTabProps) {
                   <button
                     onClick={() => handleRevoke(s.id)}
                     disabled={revoking === s.id}
-                    className="ml-3 shrink-0 text-xs text-red-600 hover:text-red-800
-                      font-medium transition-colors disabled:opacity-50"
+                    className={`ml-3 shrink-0 ${btnGhost}`}
                   >
-                    {revoking === s.id ? '…' : 'Revoke'}
+                    {revoking === s.id ? 'Revoking…' : 'Revoke'}
                   </button>
                 )}
               </div>
@@ -141,18 +142,18 @@ export default function SecurityTab({ publicKey }: SecurityTabProps) {
 
       {/* Wallet recovery */}
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Wallet Recovery</h3>
-        <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 space-y-2">
-          <p className="text-sm font-semibold text-amber-900">Your wallet is secured by Freighter</p>
-          <p className="text-sm text-amber-800">
+        <h3 className="text-xs font-semibold text-green-800 uppercase tracking-wider">Wallet Recovery</h3>
+        <div className="rounded-xl bg-green-50 border border-green-200 p-4 space-y-2">
+          <p className="text-sm font-semibold text-green-900">Your wallet is secured by Freighter</p>
+          <p className="text-sm text-green-800">
             FarmChain never stores your private key. To back it up:
           </p>
-          <ol className="list-decimal list-inside text-sm text-amber-800 space-y-1 pl-1">
+          <ol className="list-decimal list-inside text-sm text-green-800 space-y-1 pl-1">
             <li>Open the Freighter browser extension.</li>
             <li>Go to <strong>Settings → Security → Show Secret Key</strong>.</li>
             <li>Write your 12/24-word seed phrase and store it offline, never digitally.</li>
           </ol>
-          <p className="text-xs text-amber-700 mt-1 font-mono">
+          <p className="text-xs text-green-700 mt-1 font-mono">
             Connected: {shortAddress(publicKey)}
           </p>
         </div>
@@ -160,7 +161,7 @@ export default function SecurityTab({ publicKey }: SecurityTabProps) {
 
       {/* 2FA */}
       <section className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-700 uppercase tracking-wider">Two-Factor Authentication</h3>
+        <h3 className="text-xs font-semibold text-green-800 uppercase tracking-wider">Two-Factor Authentication</h3>
         <div className="rounded-xl bg-green-50 border border-green-200 p-4">
           <p className="text-sm text-green-800">
             Your Freighter wallet is your second factor. Every action requires signing with your
