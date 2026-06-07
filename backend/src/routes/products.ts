@@ -83,6 +83,12 @@ router.post('/', authMiddleware, upload.array('images', 5), async (req: AuthRequ
     res.status(403).json({ error: 'Only farmers can list products' });
     return;
   }
+  // B3: Validate quantity is a finite positive integer
+  const parsedQuantity = Number(quantity);
+  if (!Number.isFinite(parsedQuantity) || parsedQuantity < 1 || parsedQuantity > 1_000_000 || !Number.isInteger(parsedQuantity)) {
+    res.status(400).json({ error: 'quantity must be a whole number between 1 and 1,000,000' });
+    return;
+  }
   // Convert XLM to stroops (1 XLM = 10_000_000 stroops) for BIGINT storage
   const priceStroops = Math.round(parseFloat(priceXlm) * 10_000_000);
   if (!isFinite(priceStroops) || priceStroops <= 0) {
