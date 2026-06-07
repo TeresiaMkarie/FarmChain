@@ -10,6 +10,9 @@ import FarmerDashboard from './pages/FarmerDashboard';
 import ListProduct from './pages/ListProduct';
 import BuyerDashboard from './pages/BuyerDashboard';
 import OrderPage from './pages/OrderPage';
+import FarmerProfile from './pages/FarmerProfile';
+import AdminDashboard from './pages/AdminDashboard';
+import CartPage from './pages/CartPage';
 
 function ProtectedRoute({ children, requiredRole }: { children: React.ReactElement; requiredRole?: string }) {
   const { connected, role } = useWalletStore();
@@ -43,6 +46,14 @@ export default function App() {
 
             <Route path="/orders/:id" element={
               <ProtectedRoute><OrderPage /></ProtectedRoute>
+            } />
+
+            <Route path="/cart" element={<CartPage />} />
+
+            <Route path="/farmers/:publicKey" element={<FarmerProfile />} />
+
+            <Route path="/admin" element={
+              <ProtectedRoute requiredRole="Admin"><AdminDashboard /></ProtectedRoute>
             } />
 
             <Route path="*" element={<Navigate to="/" replace />} />

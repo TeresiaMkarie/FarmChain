@@ -3,12 +3,13 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useProduct } from '../hooks/useProducts';
 import { useWalletStore } from '../store/walletStore';
 import { useBalance } from '../hooks/useBalance';
-import { createOrder as createOrderApi, fundOrder, cancelOrder, getUser } from '../lib/api';
+import { createOrder as createOrderApi, fundOrder, cancelOrder, abortOrder, getUser } from '../lib/api';
 import { createOrder as createOrderChain } from '../lib/soroban';
 import { stroopsToXlm } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
 import TxStatusToast from '../components/shared/TxStatusToast';
 import { parseError } from '../lib/errors';
+import { useCartStore } from '../store/cartStore';
 
 function buildAddressFromProfile(u: {
   address_line?: string | null;
@@ -27,6 +28,7 @@ export default function ProductDetail() {
   const { product, loading, error } = useProduct(id!);
   const { publicKey } = useWalletStore();
   const navigate = useNavigate();
+  const { add: addToCart } = useCartStore();
 
   const [quantity, setQuantity] = useState(1);
   const [deliveryAddress, setDeliveryAddress] = useState('');
@@ -91,8 +93,8 @@ export default function ProductDetail() {
           amountStroops,
         ));
       } catch (escrowErr) {
-        // Roll back the pending DB order so stock is restored
-        await cancelOrder(orderId!).catch(() => {});
+        // Hard-delete the pending DB order so it never shows as 'cancelled'
+        await abortOrder(orderId!).catch(() => {});
         throw escrowErr;
       }
 
@@ -244,13 +246,32 @@ export default function ProductDetail() {
               </p>
             )}
 
-            <button
-              onClick={handleBuy}
-              disabled={buying || !deliveryAddress.trim() || insufficientBalance}
-              className="w-full bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition"
-            >
-              {buying ? 'Processing…' : `Buy for ${totalXlm} XLM`}
-            </button>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  addToCart({
+                    productId: product.id,
+                    name: product.name,
+                    priceXlm: product.priceXlm,
+                    unit: product.unit,
+                    farmerPk: product.farmerPk,
+                    onChainId: product.onChainId ?? 0,
+                    maxQuantity: product.quantity,
+                  }, quantity);
+                  setToast({ status: 'success', message: `${product.name} added to cart.` });
+                }}
+                className="flex-1 border border-green-700 text-green-700 hover:bg-green-50 py-3 rounded-xl font-semibold transition"
+              >
+                Add to Cart
+              </button>
+              <button
+                onClick={handleBuy}
+                disabled={buying || !deliveryAddress.trim() || insufficientBalance}
+                className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition"
+              >
+                {buying ? 'Processing…' : `Buy Now`}
+              </button>
+            </div>
           </div>
         )}
 

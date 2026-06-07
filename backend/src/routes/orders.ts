@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import pool from '../db/client';
 import { authMiddleware, AuthRequest } from '../middleware/auth';
+import { notify } from './notifications';
 
 const router = Router();
 
@@ -11,12 +12,14 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
   const limit = Math.min(parseInt(req.query.limit as string ?? '50', 10), 100);
   const offset = parseInt(req.query.offset as string ?? '0', 10);
-  const statusFilter = typeof req.query.status === 'string' ? req.query.status.split(',') : null;
+  const ALLOWED_STATUSES = new Set(['created','funded','shipped','completed','disputed','refunded','resolved','cancelled']);
+  const rawStatuses = typeof req.query.status === 'string' ? req.query.status.split(',') : [];
+  const statusFilter = rawStatuses.filter((s) => ALLOWED_STATUSES.has(s));
 
   try {
     const values: unknown[] = [publicKey];
     let statusClause = '';
-    if (statusFilter && statusFilter.length > 0) {
+    if (statusFilter.length > 0) {
       const placeholders = statusFilter.map((_, i) => `$${i + 2}`).join(',');
       statusClause = `AND o.status IN (${placeholders})`;
       values.push(...statusFilter);
@@ -37,7 +40,7 @@ router.get('/', authMiddleware, async (req: AuthRequest, res: Response) => {
 
     const countValues: unknown[] = [publicKey];
     let countStatusClause = '';
-    if (statusFilter && statusFilter.length > 0) {
+    if (statusFilter.length > 0) {
       const placeholders = statusFilter.map((_, i) => `$${i + 2}`).join(',');
       countStatusClause = `AND status IN (${placeholders})`;
       countValues.push(...statusFilter);
@@ -85,7 +88,7 @@ router.get('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
 
 // POST /orders
 router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
-  const { productId, quantity, deliveryAddress } = req.body;
+  const { productId, quantity, deliveryAddress, deliveryDate } = req.body;
   if (!productId || !quantity || quantity < 1) {
     res.status(400).json({ error: 'productId and quantity required' });
     return;
@@ -111,9 +114,9 @@ router.post('/', authMiddleware, async (req: AuthRequest, res: Response) => {
     }
     const amount = BigInt(p.price_xlm) * BigInt(quantity);
     const result = await pool.query(
-      `INSERT INTO orders (product_id, farmer_pk, buyer_pk, amount, quantity, delivery_address, status)
-       VALUES ($1, $2, $3, $4, $5, $6, 'created') RETURNING *`,
-      [productId, p.farmer_pk, req.user!.publicKey, amount.toString(), quantity, deliveryAddress],
+      `INSERT INTO orders (product_id, farmer_pk, buyer_pk, amount, quantity, delivery_address, delivery_date, status)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, 'created') RETURNING *`,
+      [productId, p.farmer_pk, req.user!.publicKey, amount.toString(), quantity, deliveryAddress, deliveryDate ?? null],
     );
     await pool.query(
       `UPDATE products
@@ -151,44 +154,72 @@ router.patch('/:id/fund', authMiddleware, async (req: AuthRequest, res: Response
       res.status(409).json({ error: 'Order already funded or not in created state' });
       return;
     }
+    await notify(orderRes.rows[0].farmer_pk, 'order_funded', { orderId: req.params.id });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: 'Failed to fund order' });
   }
 });
 
-// DELETE /orders/:id  — buyer only, cancels a 'created' (unfunded) order
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
-    if (!orderRes.rows[0]) {
-      res.status(404).json({ error: 'Order not found' });
-      return;
-    }
-    const order = orderRes.rows[0];
-    if (order.buyer_pk !== req.user!.publicKey) {
-      res.status(403).json({ error: 'Only the buyer can cancel this order' });
-      return;
-    }
-    if (order.status !== 'created') {
-      res.status(409).json({ error: 'Only unfunded orders can be cancelled' });
-      return;
-    }
+// Shared helper: restore stock and remove or cancel an unfunded order.
+// hardDelete=true  → used for programmatic rollback (escrow tx failed before funding)
+//                    removes the row entirely so it never appears in the buyer's history
+// hardDelete=false → used for buyer-initiated cancel; sets status='cancelled'
+async function cancelOrAbortOrder(
+  orderId: string,
+  buyerPk: string,
+  hardDelete: boolean,
+  res: Response,
+) {
+  const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+  if (!orderRes.rows[0]) {
+    res.status(404).json({ error: 'Order not found' });
+    return;
+  }
+  const order = orderRes.rows[0];
+  if (order.buyer_pk !== buyerPk) {
+    res.status(403).json({ error: 'Only the buyer can cancel this order' });
+    return;
+  }
+  if (order.status !== 'created') {
+    res.status(409).json({ error: 'Only unfunded orders can be cancelled' });
+    return;
+  }
+  if (hardDelete) {
+    await pool.query('DELETE FROM orders WHERE id = $1', [orderId]);
+  } else {
     await pool.query(
       `UPDATE orders SET status='cancelled', updated_at=NOW() WHERE id=$1`,
-      [req.params.id],
+      [orderId],
     );
-    // Restore product quantity
-    await pool.query(
-      `UPDATE products
-         SET quantity = quantity + $1,
-             status   = CASE WHEN status = 'sold' THEN 'active' ELSE status END
-       WHERE id = $2`,
-      [order.quantity ?? 1, order.product_id],
-    );
-    res.json({ ok: true });
+  }
+  // Restore product quantity in both cases
+  await pool.query(
+    `UPDATE products
+       SET quantity = quantity + $1,
+           status   = CASE WHEN status = 'sold' THEN 'active' ELSE status END
+     WHERE id = $2`,
+    [order.quantity ?? 1, order.product_id],
+  );
+  res.json({ ok: true });
+}
+
+// DELETE /orders/:id — buyer-initiated cancel; sets status='cancelled' (visible in history)
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    await cancelOrAbortOrder(String(req.params.id), req.user!.publicKey, false, res);
   } catch {
     res.status(500).json({ error: 'Failed to cancel order' });
+  }
+});
+
+// DELETE /orders/:id/abort — programmatic rollback after escrow tx failure; hard-deletes the row
+// so a payment error never leaves a phantom 'cancelled' entry in the buyer's history
+router.delete('/:id/abort', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    await cancelOrAbortOrder(String(req.params.id), req.user!.publicKey, true, res);
+  } catch {
+    res.status(500).json({ error: 'Failed to abort order' });
   }
 });
 
@@ -215,6 +246,7 @@ router.post('/:id/ship', authMiddleware, async (req: AuthRequest, res: Response)
       res.status(409).json({ error: 'Order is not in funded state' });
       return;
     }
+    await notify(orderRes.rows[0].buyer_pk, 'order_shipped', { orderId: req.params.id, trackingInfo: trackingInfo ?? null });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: 'Failed to ship order' });
@@ -248,6 +280,7 @@ router.post('/:id/complete', authMiddleware, async (req: AuthRequest, res: Respo
       `INSERT INTO receipts (order_id, tx_hash) VALUES ($1, $2)`,
       [req.params.id, txHash ?? null],
     );
+    await notify(orderRes.rows[0].farmer_pk, 'order_completed', { orderId: req.params.id });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: 'Failed to complete order' });
@@ -282,6 +315,9 @@ router.post('/:id/dispute', authMiddleware, async (req: AuthRequest, res: Respon
       `INSERT INTO disputes (order_id, raised_by, reason) VALUES ($1, $2, $3)`,
       [req.params.id, req.user!.publicKey, reason ?? null],
     );
+    // Notify both parties
+    const otherPk = req.user!.publicKey === order.buyer_pk ? order.farmer_pk : order.buyer_pk;
+    await notify(otherPk, 'dispute_raised', { orderId: req.params.id });
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: 'Failed to raise dispute' });
@@ -316,6 +352,38 @@ router.patch('/:id/resolve', authMiddleware, async (req: AuthRequest, res: Respo
     res.json({ ok: true });
   } catch {
     res.status(500).json({ error: 'Failed to resolve dispute' });
+  }
+});
+
+// GET /orders/export?format=csv  — F3: download orders as CSV
+router.get('/export', authMiddleware, async (req: AuthRequest, res: Response) => {
+  const { publicKey, role } = req.user!;
+  const col = role === 'Farmer' ? 'farmer_pk' : 'buyer_pk';
+  try {
+    const result = await pool.query(
+      `SELECT o.id, o.status, o.amount, o.quantity, o.delivery_address, o.delivery_date,
+              o.created_at, o.updated_at, o.tracking_info, o.tx_hash,
+              o.farmer_pk, o.buyer_pk, p.name AS product_name
+       FROM orders o
+       LEFT JOIN products p ON o.product_id = p.id
+       WHERE o.${col} = $1
+       ORDER BY o.created_at DESC`,
+      [publicKey],
+    );
+    const headers = ['id','status','amount_stroops','quantity','product','delivery_address','delivery_date','tracking_info','tx_hash','farmer_pk','buyer_pk','created_at','updated_at'];
+    const escape = (v: unknown) => {
+      const s = v == null ? '' : String(v);
+      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const rows = result.rows.map((r) =>
+      [r.id,r.status,r.amount,r.quantity,r.product_name,r.delivery_address,r.delivery_date,r.tracking_info,r.tx_hash,r.farmer_pk,r.buyer_pk,r.created_at,r.updated_at].map(escape).join(',')
+    );
+    const csv = [headers.join(','), ...rows].join('\n');
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename="farmchain-orders-${Date.now()}.csv"`);
+    res.send(csv);
+  } catch {
+    res.status(500).json({ error: 'Failed to export orders' });
   }
 });
 

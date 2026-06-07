@@ -40,7 +40,7 @@ export default function MarketplaceTab({ user, onUserUpdate }: Props) {
   return (
     <form onSubmit={handleSave} className="space-y-6">
       <div>
-        <h2 className="text-base font-semibold text-gray-900">Marketplace Preferences</h2>
+        <h2 className="text-base font-semibold text-green-800">Marketplace Preferences</h2>
         <p className="text-sm text-gray-500 mt-1">Configure your buying and selling defaults.</p>
       </div>
 
@@ -116,8 +116,8 @@ export default function MarketplaceTab({ user, onUserUpdate }: Props) {
 
       <div className="flex items-center gap-3 pt-1">
         <button type="submit" disabled={saving}
-          className="px-5 py-2 bg-green-700 hover:bg-green-800 text-white text-sm
-            font-semibold rounded-xl transition-colors disabled:opacity-50">
+          className="px-5 py-2.5 bg-green-700 hover:bg-green-600 text-white text-sm
+            font-semibold rounded-xl transition disabled:opacity-50">
           {saving ? 'Saving…' : 'Save Preferences'}
         </button>
         {saved && <span className="text-sm text-green-700 font-medium">✓ Saved</span>}

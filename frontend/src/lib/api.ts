@@ -72,5 +72,33 @@ export const getDisputes = () => api.get('/disputes');
 // Receipts
 export const getReceipt = (orderId: string) => api.get(`/receipts/${orderId}`);
 
-// Cancel order (buyer, created status only)
+// Cancel order (buyer-initiated; sets status='cancelled', stays visible in history)
 export const cancelOrder = (id: string) => api.delete(`/orders/${id}`);
+// Abort order (programmatic rollback after escrow failure; hard-deletes so it never appears as cancelled)
+export const abortOrder = (id: string) => api.delete(`/orders/${id}/abort`);
+
+// F3: Export orders as CSV
+export const exportOrders = () => api.get('/orders/export', { responseType: 'blob' });
+
+// F1: Notifications
+export const getNotifications = () => api.get('/notifications');
+export const getUnreadCount = () => api.get('/notifications/unread-count');
+export const markAllRead = () => api.patch('/notifications/read-all');
+
+// F2: Reviews
+export const getReviews = (productId: string) => api.get('/reviews', { params: { productId } });
+export const submitReview = (body: object) => api.post('/reviews', body);
+
+// F9: Recurring orders
+export const getRecurringOrders = () => api.get('/recurring');
+export const createRecurringOrder = (body: object) => api.post('/recurring', body);
+export const pauseResumeRecurring = (id: string, active: boolean) =>
+  api.patch(`/recurring/${id}`, { active });
+export const deleteRecurringOrder = (id: string) => api.delete(`/recurring/${id}`);
+
+// Admin
+export const getAdminStats = () => api.get('/admin/stats');
+export const getAdminDisputes = (params?: object) => api.get('/admin/disputes', { params });
+export const getAdminUsers = (params?: object) => api.get('/admin/users', { params });
+export const suspendUser = (pk: string, body: object) => api.patch(`/admin/users/${pk}/suspend`, body);
+export const verifyUser = (pk: string) => api.patch(`/admin/users/${pk}/verify`);

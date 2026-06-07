@@ -262,6 +262,45 @@ impl EscrowContract {
         );
     }
 
+    // Anyone can call this after 14 days if the order is still Funded — refunds the buyer.
+    // Protects buyers from farmers who never ship.
+    pub fn timeout_order(env: Env, order_id: u64) {
+        const TIMEOUT_SECS: u64 = 14 * 24 * 60 * 60; // 14 days
+
+        let mut order: Order = env
+            .storage()
+            .persistent()
+            .get(&DataKey::Order(order_id))
+            .expect("order not found");
+
+        assert!(order.status == symbol_short!("Funded"), "order is not in Funded state");
+        assert!(
+            env.ledger().timestamp() >= order.created_at + TIMEOUT_SECS,
+            "timeout period has not elapsed"
+        );
+
+        let token_addr: Address = env
+            .storage()
+            .instance()
+            .get(&DataKey::Token)
+            .expect("not initialised");
+
+        let token_client = token::Client::new(&env, &token_addr);
+        token_client.transfer(&env.current_contract_address(), &order.buyer, &order.amount);
+
+        order.status = symbol_short!("Refunded");
+        order.updated_at = env.ledger().timestamp();
+
+        env.storage()
+            .persistent()
+            .set(&DataKey::Order(order_id), &order);
+
+        env.events().publish(
+            (symbol_short!("order"), symbol_short!("refunded")),
+            order_id,
+        );
+    }
+
     pub fn get_order(env: Env, order_id: u64) -> Order {
         env.storage()
             .persistent()
