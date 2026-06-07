@@ -2,6 +2,7 @@ import 'dotenv/config';
 import path from 'path';
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { rateLimit } from 'express-rate-limit';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
@@ -25,6 +26,22 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 const allowedOrigins: (string | RegExp)[] = IS_PROD
   ? [process.env.FRONTEND_URL!]
   : [process.env.FRONTEND_URL ?? 'http://localhost:5173', /^http:\/\/localhost:\d+$/];
+
+// S5: Security headers (CSP, X-Frame-Options, HSTS, etc.)
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      imgSrc: ["'self'", 'data:', 'https://ipfs.io', 'https://gateway.pinata.cloud'],
+      connectSrc: ["'self'", 'https://horizon-testnet.stellar.org', 'https://horizon.stellar.org'],
+      fontSrc: ["'self'"],
+      objectSrc: ["'none'"],
+      frameAncestors: ["'none'"],
+    },
+  },
+}));
 
 app.use(cors({
   origin: (origin, cb) => {
