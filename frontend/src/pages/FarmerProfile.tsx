@@ -19,8 +19,11 @@ interface FarmerUser {
 export default function FarmerProfile() {
   const { publicKey } = useParams<{ publicKey: string }>();
   const [farmer, setFarmer] = useState<FarmerUser | null>(null);
-  const [userLoading, setUserLoading] = useState(true);
   const [userError, setUserError] = useState<string | null>(null);
+  const [fetchedKey, setFetchedKey] = useState<string | null>(null);
+
+  // Derived — avoids synchronous setState inside the effect body
+  const userLoading = fetchedKey !== publicKey;
 
   const { products, loading: productsLoading } = useProducts(
     publicKey ? { farmer: publicKey } : undefined,
@@ -29,11 +32,23 @@ export default function FarmerProfile() {
 
   useEffect(() => {
     if (!publicKey) return;
-    setUserLoading(true);
+    let cancelled = false;
+
     getUser(publicKey)
-      .then((res) => setFarmer(res.data.user))
-      .catch(() => setUserError('Farmer not found.'))
-      .finally(() => setUserLoading(false));
+      .then((res) => {
+        if (cancelled) return;
+        setFarmer(res.data.user);
+        setUserError(null);
+      })
+      .catch(() => {
+        if (cancelled) return;
+        setUserError('Farmer not found.');
+      })
+      .finally(() => {
+        if (!cancelled) setFetchedKey(publicKey);
+      });
+
+    return () => { cancelled = true; };
   }, [publicKey]);
 
   if (userLoading) return <p className="p-10 text-gray-400">Loading…</p>;
