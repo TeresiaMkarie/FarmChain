@@ -7,9 +7,11 @@ import WalletDropdown from '../wallet/WalletDropdown';
 import WalletAvatar from '../wallet/WalletAvatar';
 import SettingsModal from '../settings/SettingsModal';
 import api from '../../lib/api';
+import { useCartStore } from '../../store/cartStore';
 
 export default function Navbar() {
   const { publicKey, role, connected, disconnect } = useWallet();
+  const cartCount = useCartStore((s) => s.count());
   const navigate = useNavigate();
   const [scrolled, setScrolled] = useState(false);
   const { open, setOpen, ref } = useDropdown();
@@ -113,6 +115,24 @@ export default function Navbar() {
 
           {/* Right side */}
           <div className="flex items-center gap-3 shrink-0">
+            {/* Cart icon — only for buyers */}
+            {connected && role === 'Buyer' && (
+              <Link
+                to="/cart"
+                className="relative p-1.5 rounded-full hover:bg-white/10 transition-colors text-green-200"
+                aria-label="Cart"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                {cartCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-green-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">
+                    {cartCount > 9 ? '9+' : cartCount}
+                  </span>
+                )}
+              </Link>
+            )}
+
             {/* Notification bell */}
             {connected && (
               <div ref={notifRef} className="relative">

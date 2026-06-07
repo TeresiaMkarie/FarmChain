@@ -87,6 +87,13 @@ export const markAllRead = () => api.patch('/notifications/read-all');
 export const getReviews = (productId: string) => api.get('/reviews', { params: { productId } });
 export const submitReview = (body: object) => api.post('/reviews', body);
 
+// F9: Recurring orders
+export const getRecurringOrders = () => api.get('/recurring');
+export const createRecurringOrder = (body: object) => api.post('/recurring', body);
+export const pauseResumeRecurring = (id: string, active: boolean) =>
+  api.patch(`/recurring/${id}`, { active });
+export const deleteRecurringOrder = (id: string) => api.delete(`/recurring/${id}`);
+
 // Admin
 export const getAdminStats = () => api.get('/admin/stats');
 export const getAdminDisputes = (params?: object) => api.get('/admin/disputes', { params });
