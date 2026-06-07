@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { useProduct } from '../hooks/useProducts';
 import { useWalletStore } from '../store/walletStore';
 import { useBalance } from '../hooks/useBalance';
-import { createOrder as createOrderApi, fundOrder, cancelOrder, getUser } from '../lib/api';
+import { createOrder as createOrderApi, fundOrder, cancelOrder, abortOrder, getUser } from '../lib/api';
 import { createOrder as createOrderChain } from '../lib/soroban';
 import { stroopsToXlm } from '../lib/stellar';
 import StatusBadge from '../components/shared/StatusBadge';
@@ -93,8 +93,8 @@ export default function ProductDetail() {
           amountStroops,
         ));
       } catch (escrowErr) {
-        // Roll back the pending DB order so stock is restored
-        await cancelOrder(orderId!).catch(() => {});
+        // Hard-delete the pending DB order so it never shows as 'cancelled'
+        await abortOrder(orderId!).catch(() => {});
         throw escrowErr;
       }
 

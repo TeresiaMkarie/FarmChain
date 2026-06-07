@@ -72,8 +72,10 @@ export const getDisputes = () => api.get('/disputes');
 // Receipts
 export const getReceipt = (orderId: string) => api.get(`/receipts/${orderId}`);
 
-// Cancel order (buyer, created status only)
+// Cancel order (buyer-initiated; sets status='cancelled', stays visible in history)
 export const cancelOrder = (id: string) => api.delete(`/orders/${id}`);
+// Abort order (programmatic rollback after escrow failure; hard-deletes so it never appears as cancelled)
+export const abortOrder = (id: string) => api.delete(`/orders/${id}/abort`);
 
 // F3: Export orders as CSV
 export const exportOrders = () => api.get('/orders/export', { responseType: 'blob' });

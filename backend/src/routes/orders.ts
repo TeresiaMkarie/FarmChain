@@ -161,38 +161,65 @@ router.patch('/:id/fund', authMiddleware, async (req: AuthRequest, res: Response
   }
 });
 
-// DELETE /orders/:id  — buyer only, cancels a 'created' (unfunded) order
-router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
-  try {
-    const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1', [req.params.id]);
-    if (!orderRes.rows[0]) {
-      res.status(404).json({ error: 'Order not found' });
-      return;
-    }
-    const order = orderRes.rows[0];
-    if (order.buyer_pk !== req.user!.publicKey) {
-      res.status(403).json({ error: 'Only the buyer can cancel this order' });
-      return;
-    }
-    if (order.status !== 'created') {
-      res.status(409).json({ error: 'Only unfunded orders can be cancelled' });
-      return;
-    }
+// Shared helper: restore stock and remove or cancel an unfunded order.
+// hardDelete=true  → used for programmatic rollback (escrow tx failed before funding)
+//                    removes the row entirely so it never appears in the buyer's history
+// hardDelete=false → used for buyer-initiated cancel; sets status='cancelled'
+async function cancelOrAbortOrder(
+  orderId: string,
+  buyerPk: string,
+  hardDelete: boolean,
+  res: Response,
+) {
+  const orderRes = await pool.query('SELECT * FROM orders WHERE id = $1', [orderId]);
+  if (!orderRes.rows[0]) {
+    res.status(404).json({ error: 'Order not found' });
+    return;
+  }
+  const order = orderRes.rows[0];
+  if (order.buyer_pk !== buyerPk) {
+    res.status(403).json({ error: 'Only the buyer can cancel this order' });
+    return;
+  }
+  if (order.status !== 'created') {
+    res.status(409).json({ error: 'Only unfunded orders can be cancelled' });
+    return;
+  }
+  if (hardDelete) {
+    await pool.query('DELETE FROM orders WHERE id = $1', [orderId]);
+  } else {
     await pool.query(
       `UPDATE orders SET status='cancelled', updated_at=NOW() WHERE id=$1`,
-      [req.params.id],
+      [orderId],
     );
-    // Restore product quantity
-    await pool.query(
-      `UPDATE products
-         SET quantity = quantity + $1,
-             status   = CASE WHEN status = 'sold' THEN 'active' ELSE status END
-       WHERE id = $2`,
-      [order.quantity ?? 1, order.product_id],
-    );
-    res.json({ ok: true });
+  }
+  // Restore product quantity in both cases
+  await pool.query(
+    `UPDATE products
+       SET quantity = quantity + $1,
+           status   = CASE WHEN status = 'sold' THEN 'active' ELSE status END
+     WHERE id = $2`,
+    [order.quantity ?? 1, order.product_id],
+  );
+  res.json({ ok: true });
+}
+
+// DELETE /orders/:id — buyer-initiated cancel; sets status='cancelled' (visible in history)
+router.delete('/:id', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    await cancelOrAbortOrder(String(req.params.id), req.user!.publicKey, false, res);
   } catch {
     res.status(500).json({ error: 'Failed to cancel order' });
+  }
+});
+
+// DELETE /orders/:id/abort — programmatic rollback after escrow tx failure; hard-deletes the row
+// so a payment error never leaves a phantom 'cancelled' entry in the buyer's history
+router.delete('/:id/abort', authMiddleware, async (req: AuthRequest, res: Response) => {
+  try {
+    await cancelOrAbortOrder(String(req.params.id), req.user!.publicKey, true, res);
+  } catch {
+    res.status(500).json({ error: 'Failed to abort order' });
   }
 });
 

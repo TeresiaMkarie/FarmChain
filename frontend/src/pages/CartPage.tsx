@@ -4,7 +4,7 @@ import { useCartStore } from '../store/cartStore';
 import { useWalletStore } from '../store/walletStore';
 import { useBalance } from '../hooks/useBalance';
 import { stroopsToXlm } from '../lib/stellar';
-import { createOrder as createOrderApi, fundOrder, cancelOrder, getUser } from '../lib/api';
+import { createOrder as createOrderApi, fundOrder, abortOrder, getUser } from '../lib/api';
 import { createOrder as createOrderChain } from '../lib/soroban';
 import { parseError } from '../lib/errors';
 import TxStatusToast from '../components/shared/TxStatusToast';
@@ -92,7 +92,7 @@ export default function CartPage() {
           placedOrderIds.push(orderId!);
           setProgress({ done: i + 1, total: items.length });
         } catch (err) {
-          if (orderId) await cancelOrder(orderId).catch(() => {});
+          if (orderId) await abortOrder(orderId).catch(() => {});
           throw new Error(`Failed on "${item.name}": ${parseError(err)}`);
         }
       }
