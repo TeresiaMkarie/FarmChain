@@ -7,14 +7,16 @@ export interface AuthRequest extends Request {
 }
 
 export async function authMiddleware(req: AuthRequest, res: Response, next: NextFunction) {
+  // S2: Accept token from Authorization header (existing clients) or httpOnly cookie
   const header = req.headers.authorization;
-  if (!header?.startsWith('Bearer ')) {
+  const rawToken = header?.startsWith('Bearer ') ? header.slice(7) : (req.cookies?.fc_token ?? null);
+  if (!rawToken) {
     res.status(401).json({ error: 'No token' });
     return;
   }
   let payload: { publicKey: string; role: string; userId: string };
   try {
-    payload = jwt.verify(header.slice(7), process.env.JWT_SECRET!) as typeof payload;
+    payload = jwt.verify(rawToken, process.env.JWT_SECRET!) as typeof payload;
   } catch {
     res.status(401).json({ error: 'Invalid token' });
     return;

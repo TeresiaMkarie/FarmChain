@@ -78,6 +78,38 @@ CREATE TABLE IF NOT EXISTS receipts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+-- F8: Wishlist
+CREATE TABLE IF NOT EXISTS wishlists (
+  buyer_pk   TEXT NOT NULL REFERENCES users(public_key) ON DELETE CASCADE,
+  product_id UUID NOT NULL REFERENCES products(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (buyer_pk, product_id)
+);
+
+-- F11: Farmer-to-buyer messages per order
+CREATE TABLE IF NOT EXISTS messages (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  order_id   UUID NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  sender_pk  TEXT NOT NULL REFERENCES users(public_key),
+  body       TEXT NOT NULL CHECK (char_length(body) <= 2000),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_messages_order_id ON messages(order_id);
+
+-- F9: Recurring orders
+CREATE TABLE IF NOT EXISTS recurring_orders (
+  id               UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  buyer_pk         TEXT NOT NULL REFERENCES users(public_key) ON DELETE CASCADE,
+  product_id       UUID NOT NULL REFERENCES products(id),
+  quantity         INTEGER NOT NULL DEFAULT 1,
+  delivery_address TEXT NOT NULL,
+  frequency        TEXT NOT NULL CHECK (frequency IN ('weekly','fortnightly','monthly')),
+  next_due_at      TIMESTAMPTZ NOT NULL,
+  active           BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX IF NOT EXISTS idx_recurring_buyer ON recurring_orders(buyer_pk);
+
 -- F1: In-app notifications
 CREATE TABLE IF NOT EXISTS notifications (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),

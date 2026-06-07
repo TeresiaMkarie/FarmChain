@@ -3,6 +3,7 @@ import path from 'path';
 import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
@@ -13,6 +14,9 @@ import receiptRoutes from './routes/receipts';
 import notificationRoutes from './routes/notifications';
 import reviewRoutes from './routes/reviews';
 import adminRoutes from './routes/admin';
+import wishlistRoutes from './routes/wishlist';
+import messageRoutes from './routes/messages';
+import recurringRoutes from './routes/recurring';
 
 // S1: Fail fast if JWT secret is missing or too short to be secure
 const JWT_SECRET = process.env.JWT_SECRET ?? '';
@@ -68,6 +72,7 @@ const authLimiter = rateLimit({
   message: { error: 'Too many requests, please try again later.' },
 });
 
+app.use(cookieParser());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, '../../uploads')));
 
@@ -80,6 +85,9 @@ app.use('/receipts', receiptRoutes);
 app.use('/notifications', notificationRoutes);
 app.use('/reviews', reviewRoutes);
 app.use('/admin', adminRoutes);
+app.use('/wishlist', wishlistRoutes);
+app.use('/messages', messageRoutes);
+app.use('/recurring', recurringRoutes);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
