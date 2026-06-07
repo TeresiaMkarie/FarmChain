@@ -66,6 +66,10 @@ export default function BuyerDashboard() {
   const isRecurring = (order: Order) =>
     recurring.some((r) => r.id === order.id);
 
+  const btn          = 'px-3.5 py-1.5 rounded-xl text-xs font-semibold transition';
+  const btnSecondary = `${btn} border border-green-700 text-green-700 hover:bg-green-50`;
+  const btnGhost     = `${btn} border border-gray-300 text-gray-600 hover:bg-gray-50`;
+
   const FrequencyBadge = ({ freq, active }: { freq: string; active: boolean }) => (
     <span className={`inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium ${active ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-500'}`}>
       <span className={`w-1.5 h-1.5 rounded-full ${active ? 'bg-green-500' : 'bg-gray-400'}`} />
@@ -90,13 +94,13 @@ export default function BuyerDashboard() {
               a.href = url; a.download = 'my-orders.csv'; a.click();
               URL.revokeObjectURL(url);
             })}
-            className="border border-green-600 text-green-700 hover:bg-green-50 px-4 py-2 rounded-xl text-sm font-medium"
+            className="border border-green-700 text-green-700 hover:bg-green-50 px-4 py-2 rounded-xl text-sm font-semibold transition"
           >
             Export CSV
           </button>
           <Link
             to="/marketplace"
-            className="bg-green-700 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold"
+            className="bg-green-700 hover:bg-green-600 text-white px-5 py-2.5 rounded-xl font-semibold transition"
           >
             Browse Marketplace
           </Link>
@@ -148,20 +152,20 @@ export default function BuyerDashboard() {
                 <div className="flex gap-2">
                   <Link
                     to={`/orders/${o.id}`}
-                    className="flex-1 text-center text-xs text-green-700 font-medium border border-green-200 rounded-lg py-1.5 hover:bg-green-50"
+                    className={`flex-1 text-center ${btnGhost}`}
                   >
-                    View Order
+                    View order
                   </Link>
                   {o.status === 'completed' && o.productId && !isRecurring(o) && (
                     <button
                       onClick={() => setRecurringModal(o)}
-                      className="flex-1 text-center text-xs text-green-700 font-medium border border-green-200 rounded-lg py-1.5 hover:bg-green-50"
+                      className={`flex-1 ${btnSecondary}`}
                     >
                       Repeat order
                     </button>
                   )}
                   {isRecurring(o) && (
-                    <span className="flex-1 text-center text-xs text-green-600 font-medium border border-green-200 rounded-lg py-1.5 bg-green-50">
+                    <span className="flex-1 text-center text-xs text-green-700 font-semibold border border-green-700 rounded-xl py-1.5 bg-green-50">
                       Recurring ✓
                     </span>
                   )}
@@ -190,20 +194,22 @@ export default function BuyerDashboard() {
                     <td className="px-4 py-3">{stroopsToXlm(o.amount).toFixed(2)}</td>
                     <td className="px-4 py-3"><StatusBadge status={o.status} /></td>
                     <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Link to={`/orders/${o.id}`} className="text-green-700 hover:underline text-xs font-medium">
-                          View
+                      <div className="flex items-center gap-2">
+                        <Link to={`/orders/${o.id}`} className={btnGhost}>
+                          View order
                         </Link>
                         {o.status === 'completed' && o.productId && !isRecurring(o) && (
                           <button
                             onClick={() => setRecurringModal(o)}
-                            className="text-xs text-green-700 hover:underline font-medium"
+                            className={btnSecondary}
                           >
                             Repeat order
                           </button>
                         )}
                         {isRecurring(o) && (
-                          <span className="text-xs text-green-600 font-medium">Recurring ✓</span>
+                          <span className="px-3 py-1.5 text-xs font-semibold text-green-700 border border-green-700 rounded-xl bg-green-50">
+                            Recurring ✓
+                          </span>
                         )}
                       </div>
                     </td>
