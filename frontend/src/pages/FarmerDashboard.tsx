@@ -95,6 +95,17 @@ export default function FarmerDashboard() {
     }
   };
 
+  const handleDeleteDraft = async (product: Product) => {
+    setToast({ status: 'pending', message: `Deleting draft ${product.name}…` });
+    try {
+      await delistProductApi(String(product.id));
+      setProducts((prev) => prev.filter((p) => p.id !== product.id));
+      setToast({ status: 'success', message: `Draft "${product.name}" deleted.` });
+    } catch (err) {
+      setToast({ status: 'error', message: parseError(err) });
+    }
+  };
+
   const handleShipped = () => {
     setShipModal(null);
     refreshOrders();
@@ -199,13 +210,22 @@ export default function FarmerDashboard() {
                   </p>
                   <p className="text-xs text-gray-400 mt-0.5 capitalize">{p.category} · {p.quantity} {p.unit}</p>
                 </div>
-                <button
-                  onClick={() => handleActivate(p)}
-                  disabled={activatingId === String(p.id)}
-                  className={`${btnSm} bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-white`}
-                >
-                  {activatingId === String(p.id) ? 'Activating…' : 'Activate'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => handleActivate(p)}
+                    disabled={activatingId === String(p.id)}
+                    className={`${btnSm} bg-yellow-500 hover:bg-yellow-400 disabled:opacity-50 text-white`}
+                  >
+                    {activatingId === String(p.id) ? 'Activating…' : 'Activate'}
+                  </button>
+                  <button
+                    onClick={() => handleDeleteDraft(p)}
+                    disabled={activatingId === String(p.id)}
+                    className={`${btnSm} bg-gray-100 hover:bg-red-100 text-gray-500 hover:text-red-600 disabled:opacity-50`}
+                  >
+                    Delete draft
+                  </button>
+                </div>
               </div>
             ))}
 
@@ -381,7 +401,41 @@ export default function FarmerDashboard() {
         {oLoading ? (
           <p className="text-gray-400">Loading…</p>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {pagedOrders.length === 0 && (
+            <p className="text-gray-400 text-center py-8">No orders yet.</p>
+          )}
+
+          {/* Mobile cards */}
+          {pagedOrders.length > 0 && (
+            <div className="sm:hidden space-y-3">
+              {pagedOrders.map((o) => (
+                <div key={o.id} className="bg-white rounded-xl shadow p-4 space-y-2">
+                  <div className="flex justify-between items-start">
+                    <p className="font-medium text-gray-800 text-sm">{o.productName ?? '—'}</p>
+                    <StatusBadge status={o.status} />
+                  </div>
+                  <div className="flex justify-between text-xs text-gray-500">
+                    <span className="font-mono">{shortAddress(o.buyerPk)}</span>
+                    <span className="font-semibold text-green-700">{stroopsToXlm(Number(o.amount)).toFixed(2)} XLM</span>
+                  </div>
+                  {o.status === 'funded' ? (
+                    <button onClick={() => setShipModal(o)} className="w-full text-center text-xs bg-orange-500 hover:bg-orange-400 text-white rounded-lg py-1.5 font-medium">
+                      Ship Order
+                    </button>
+                  ) : (
+                    <Link to={`/orders/${o.id}`} className={`block text-center text-xs font-medium rounded-lg py-1.5 ${o.status === 'disputed' ? 'bg-red-50 text-red-600' : 'border border-gray-200 text-gray-600 hover:bg-gray-50'}`}>
+                      {o.status === 'disputed' ? 'View Dispute' : 'View'}
+                    </Link>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Desktop table */}
+          {pagedOrders.length > 0 && (
+            <div className="hidden sm:block overflow-x-auto">
             <table className="w-full text-sm bg-white rounded-xl shadow overflow-hidden">
               <thead className="bg-green-50 text-gray-600">
                 <tr>
@@ -426,13 +480,6 @@ export default function FarmerDashboard() {
                     </td>
                   </tr>
                 ))}
-                {pagedOrders.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="px-4 py-8 text-center text-gray-400">
-                      No orders yet.
-                    </td>
-                  </tr>
-                )}
               </tbody>
             </table>
 
@@ -458,6 +505,8 @@ export default function FarmerDashboard() {
               </div>
             )}
           </div>
+        )}
+          </>
         )}
       </section>
 
