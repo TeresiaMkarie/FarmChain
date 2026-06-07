@@ -74,7 +74,7 @@ router.get('/:id', async (req: Request, res: Response) => {
 
 // POST /products
 router.post('/', authMiddleware, upload.array('images', 5), async (req: AuthRequest, res: Response) => {
-  const { name, category, quantity, unit, priceXlm, description } = req.body;
+  const { name, category, quantity, unit, priceXlm, description, harvestedAt, bestBeforeDays } = req.body;
   if (!name || !category || !quantity || !unit || !priceXlm) {
     res.status(400).json({ error: 'name, category, quantity, unit, and priceXlm are required' });
     return;
@@ -113,9 +113,9 @@ router.post('/', authMiddleware, upload.array('images', 5), async (req: AuthRequ
     const metadataHash = crypto.createHash('sha256').update(JSON.stringify(metaObj)).digest('hex');
 
     const result = await pool.query(
-      `INSERT INTO products (farmer_pk, name, category, quantity, unit, price_xlm, image_cids, metadata_hash, description)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [req.user!.publicKey, name, category, quantity, unit, priceStroops, cids, metadataHash, description ?? null],
+      `INSERT INTO products (farmer_pk, name, category, quantity, unit, price_xlm, image_cids, metadata_hash, description, harvested_at, best_before_days)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [req.user!.publicKey, name, category, quantity, unit, priceStroops, cids, metadataHash, description ?? null, harvestedAt ?? null, bestBeforeDays ? parseInt(bestBeforeDays, 10) : null],
     );
     res.json({ product: result.rows[0], productId: result.rows[0].id, metadataHash });
   } catch (err: any) {

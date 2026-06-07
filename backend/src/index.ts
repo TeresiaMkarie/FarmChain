@@ -10,6 +10,9 @@ import orderRoutes from './routes/orders';
 import userRoutes from './routes/users';
 import disputeRoutes from './routes/disputes';
 import receiptRoutes from './routes/receipts';
+import notificationRoutes from './routes/notifications';
+import reviewRoutes from './routes/reviews';
+import adminRoutes from './routes/admin';
 
 // S1: Fail fast if JWT secret is missing or too short to be secure
 const JWT_SECRET = process.env.JWT_SECRET ?? '';
@@ -74,6 +77,9 @@ app.use('/orders', orderRoutes);
 app.use('/users', userRoutes);
 app.use('/disputes', disputeRoutes);
 app.use('/receipts', receiptRoutes);
+app.use('/notifications', notificationRoutes);
+app.use('/reviews', reviewRoutes);
+app.use('/admin', adminRoutes);
 
 app.get('/health', (_req, res) => res.json({ ok: true }));
 
