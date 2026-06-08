@@ -56,7 +56,7 @@ app.use(cors({
     const ok = allowedOrigins.some((o) =>
       typeof o === 'string' ? o === origin : o.test(origin)
     );
-    cb(ok ? null : new Error(`CORS: ${origin} not allowed`), ok);
+    cb(null, ok);
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
