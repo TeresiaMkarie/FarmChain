@@ -26,6 +26,7 @@ if (JWT_SECRET.length < 32) {
 }
 
 const app = express();
+app.set('trust proxy', 1) ;
 const PORT = process.env.PORT ?? 4000;
 const IS_PROD = process.env.NODE_ENV === 'production';
 
