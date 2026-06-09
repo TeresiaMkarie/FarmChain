@@ -75,7 +75,7 @@ const authLimiter = rateLimit({
 
 app.use(cookieParser());
 app.use(express.json());
-app.options('*', cors());
+
 // Static files (avatars, product images) must be loadable cross-origin by the React frontend.
 // Helmet sets Cross-Origin-Resource-Policy: same-origin globally; override it here.
 app.use('/uploads', (_req, res, next) => {
