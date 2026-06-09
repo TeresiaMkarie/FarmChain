@@ -270,7 +270,7 @@ export default function ProductDetail() {
               </button>
               <button
                 onClick={handleBuy}
-                disabled={buying || !deliveryAddress.trim() || insufficientBalance ||}
+                disabled={buying || !deliveryAddress.trim() || insufficientBalance}
                 className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition"
               >
                 {buying ? 'Processing…' : `Buy Now`}
