@@ -130,7 +130,8 @@ router.post('/register', async (req: Request, res: Response) => {
     await recordSession(pool, user.public_key, authToken, req);
     res.cookie('fc_token', authToken, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, secure: process.env.NODE_ENV === 'production' });
     res.json({ token: authToken, user: { id: user.id, publicKey: user.public_key, role: user.role, name: user.name } });
-  } catch {
+  } catch(error) {
+    console.error('Registration failed:', error);
     res.status(500).json({ error: 'Registration failed' });
   }
 });
@@ -161,7 +162,8 @@ router.post('/login', async (req: Request, res: Response) => {
     await recordSession(pool, user.public_key, authToken, req);
     res.cookie('fc_token', authToken, { httpOnly: true, sameSite: 'lax', maxAge: 7 * 24 * 60 * 60 * 1000, secure: process.env.NODE_ENV === 'production' });
     res.json({ token: authToken, user: { id: user.id, publicKey: user.public_key, role: user.role, name: user.name } });
-  } catch {
+  } catch(error) {
+    console.error('Login failed:', error);
     res.status(500).json({ error: 'Login failed' });
   }
 });
