@@ -33,7 +33,7 @@ const IS_PROD = process.env.NODE_ENV === 'production';
 // S3: In production only allow the configured frontend origin; in dev allow any localhost port
 const allowedOrigins: (string | RegExp)[] = IS_PROD
   ? [process.env.FRONTEND_URL!]
-  : [process.env.FRONTEND_URL ?? 'http://localhost:5173', /^http:\/\/localhost:\d+$/];
+  : [process.env.FRONTEND_URL ?? 'https://farm-chain-49co.vercel.app', /^http:\/\/localhost:\d+$/];
 
 // S5: Security headers (CSP, X-Frame-Options, HSTS, etc.)
 app.use(helmet({
