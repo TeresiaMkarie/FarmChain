@@ -249,6 +249,52 @@ export default function ProductDetail() {
                 {(parseFloat(totalXlm) + 1).toFixed(2)} XLM (including fees).
               </p>
             )}
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  addToCart({
+                    productId: product.id,
+                    name: product.name,
+                    priceXlm: product.priceXlm,
+                    unit: product.unit,
+                    farmerPk: product.farmerPk,
+                    onChainId: product.onChainId ?? 0,
+                    maxQuantity: product.quantity,
+                  }, quantity);
+                  setToast({ status: 'success', message: `${product.name} added to cart.` });
+                }}
+              
+                className="flex-1 border border-green-700 text-green-700 hover:bg-green-50 py-3 rounded-xl font-semibold transition"
+              >
+                Add to Cart
+              </button>
+              <button
+                onClick={handleBuy}
+                disabled={buying || !deliveryAddress.trim() || insufficientBalance ||}
+                className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition"
+              >
+                {buying ? 'Processing…' : `Buy Now`}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {product.status === 'active' && !publicKey && (
+          <div className="border-t pt-6">
+            <Link
+              to="/auth"
+              className="block w-full text-center bg-green-700 hover:bg-green-600 text-white py-3 rounded-xl font-semibold transition"
+            >
+              Connect Wallet to Buy
+            </Link>
+          </div>
+        )}
+      </div>
+
+      {toast && <TxStatusToast status={toast.status} message={toast.message} />}
+    </div>
+  );
+}
 
             
              
