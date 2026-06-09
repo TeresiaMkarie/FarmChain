@@ -126,7 +126,7 @@ export default function ProductDetail() {
   );
 
   const totalXlm = stroopsToXlm(Number(BigInt(product.priceXlm) * BigInt(quantity))).toFixed(2);
-  const isBuyer = publicKey && publicKey !== product.farmerPk && role !== 'Farmer';
+  const isBuyer = publicKey && role === 'Buyer';
   const insufficientBalance =
     balanceXlm !== null && parseFloat(totalXlm) > parseFloat(balanceXlm) - 1;
 
