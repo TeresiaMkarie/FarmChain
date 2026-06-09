@@ -5,8 +5,6 @@ import cors from 'cors';
 import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import { rateLimit } from 'express-rate-limit';
-
-// Routes
 import authRoutes from './routes/auth';
 import productRoutes from './routes/products';
 import orderRoutes from './routes/orders';
@@ -28,7 +26,7 @@ if (JWT_SECRET.length < 32) {
 }
 
 const app = express();
-app.set('trust proxy', 1);
+app.set('trust proxy', 1) ;
 const PORT = process.env.PORT ?? 4000;
 const IS_PROD = process.env.NODE_ENV === 'production';
 
@@ -53,27 +51,12 @@ app.use(helmet({
   },
 }));
 
-// --- UPDATED CORS CONFIGURATION ---
 app.use(cors({
   origin: (origin, cb) => {
-    // Allow requests with no origin (like mobile apps, curl, server-to-server)
-    if (!origin) return cb(null, true);  
-
-    const ok = allowedOrigins.some((o) => {
-      if (typeof o === 'string') {
-        // Strip trailing slashes from both the allowed origin and the incoming origin
-        // This prevents 'https://my-app.vercel.app/' from failing to match 'https://my-app.vercel.app'
-        const safeO = o.replace(/\/$/, '');
-        const safeOrigin = origin.replace(/\/$/, '');
-        return safeO === safeOrigin;
-      }
-      return o.test(origin);
-    });
-
-    if (!ok) {
-      console.warn(`[CORS Blocked] Origin missing from allowed list: ${origin}`);
-    }
-
+    if (!origin) return cb(null, true);  // curl / server-to-server
+    const ok = allowedOrigins.some((o) =>
+      typeof o === 'string' ? o === origin : o.test(origin)
+    );
     cb(null, ok);
   },
   credentials: true,
@@ -100,7 +83,6 @@ app.use('/uploads', (_req, res, next) => {
   next();
 }, express.static(path.join(__dirname, '../../uploads')));
 
-// Mount routes
 app.use('/auth', authLimiter, authRoutes);
 app.use('/products', productRoutes);
 app.use('/orders', orderRoutes);
@@ -119,3 +101,4 @@ app.get('/health', (_req, res) => res.json({ ok: true }));
 app.listen(PORT, () => {
   console.log(`FarmChain API running on port ${PORT}`);
 });
+
