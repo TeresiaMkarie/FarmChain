@@ -26,7 +26,7 @@ function buildAddressFromProfile(u: {
 export default function ProductDetail() {
   const { id } = useParams<{ id: string }>();
   const { product, loading, error } = useProduct(id!);
-  const { publicKey } = useWalletStore();
+  const { publicKey, role } = useWalletStore();
   const navigate = useNavigate();
   const { add: addToCart } = useCartStore();
 
@@ -50,6 +50,10 @@ export default function ProductDetail() {
   }, [publicKey, addressLoaded]);
 
   const handleBuy = async () => {
+    if (role === 'Farmer') {
+    alert('Farmers cannot purchase products. Please create a Buyer account.')
+    return
+  }
     if (!publicKey) {
       navigate('/auth');
       return;
@@ -122,7 +126,7 @@ export default function ProductDetail() {
   );
 
   const totalXlm = stroopsToXlm(Number(BigInt(product.priceXlm) * BigInt(quantity))).toFixed(2);
-  const isBuyer = publicKey && publicKey !== product.farmerPk;
+  const isBuyer = publicKey && publicKey !== product.farmerPk && role !== 'Farmer';
   const insufficientBalance =
     balanceXlm !== null && parseFloat(totalXlm) > parseFloat(balanceXlm) - 1;
 
@@ -246,54 +250,5 @@ export default function ProductDetail() {
               </p>
             )}
 
-            <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  addToCart({
-                    productId: product.id,
-                    name: product.name,
-                    priceXlm: product.priceXlm,
-                    unit: product.unit,
-                    farmerPk: product.farmerPk,
-                    onChainId: product.onChainId ?? 0,
-                    maxQuantity: product.quantity,
-                  }, quantity);
-                  setToast({ status: 'success', message: `${product.name} added to cart.` });
-                }}
-                className="flex-1 border border-green-700 text-green-700 hover:bg-green-50 py-3 rounded-xl font-semibold transition"
-              >
-                Add to Cart
-              </button>
-              <button
-                onClick={handleBuy}
-                disabled={buying || !deliveryAddress.trim() || insufficientBalance}
-                className="flex-1 bg-green-700 hover:bg-green-600 disabled:opacity-50 text-white py-3 rounded-xl font-semibold transition"
-              >
-                {buying ? 'Processing…' : `Buy Now`}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {product.status === 'active' && !publicKey && (
-          <div className="border-t pt-6">
-            <Link
-              to="/auth"
-              className="block w-full text-center bg-green-700 hover:bg-green-600 text-white py-3 rounded-xl font-semibold transition"
-            >
-              Connect Wallet to Buy
-            </Link>
-          </div>
-        )}
-
-        {product.status !== 'active' && (
-          <p className="text-sm text-gray-400 border-t pt-4 italic">
-            This product is no longer available.
-          </p>
-        )}
-      </div>
-
-      {toast && <TxStatusToast {...toast} onClose={() => setToast(null)} />}
-    </div>
-  );
-}
+            
+             
